@@ -20,7 +20,19 @@ You spawn into Honeyville with a small plot of land to get started. The starting
 
 ## Clone repo
 
-If you don't use steam and want to download it directly from github, don't worry it's very easy! 
+If you don't use steam and want to download it directly from github, don't worry it's very easy!
+
+Please ensure you have ```Homebrew``` and ```Odin``` downloaded.
+
+WITH HOMEBREW DOWNLOADED:
+
+Open a new terminal and run:
+
+```
+brew install odin
+```
+
+If you don't have Homebrew installed, please visit ``` https://odin-lang.org/docs/install/ ``` to install the Odin language or build from source, this is needed so you can build your release as an executable. 
 
 Open your terminal and create a directory/folder for FuzzyBuddyFarms to be stored into.
 
@@ -42,7 +54,7 @@ Once the game has downloaded, you can build an executable version to launch as a
 cd fuzzybuddyfarms
 ```
 
-and then run
+Then run to build an executable. This will not build unless you have Odin installed as I mentioned earlier.
 
 ```
 odin build . -out:FUZZYBUDDYFARMS -o:speed && odin build . -out:FUZZYBUDDYFARMS -o:speed -extra-linker-flags:"-rpath @executable_path"
