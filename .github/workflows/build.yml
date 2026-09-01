@@ -57,12 +57,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release: latest
 
-<<<<<<< HEAD
-||||||| 8837468
-      - name: Vet / check
-        run: odin check ${{ env.ODIN_PACKAGE_PATH }} -vet -strict-style
-
-=======
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -76,23 +70,32 @@ jobs:
             libgl1-mesa-dev \
             libasound2-dev
             
->>>>>>> c0ec1336da845160d8d42f504a9ccf3a99bcb021
       - name: Build
         run: odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
 
-      - name: Archive (Unix)
+      - name: Stage release folder (Unix)
         if: runner.os != 'Windows'
-        run: zip -j ${{ matrix.asset }}.zip ${{ matrix.output }}
+        run: |
+          mkdir -p release/${{ matrix.asset }}
+          cp ${{ matrix.output }} release/${{ matrix.asset }}/
+          cp -r assets release/${{ matrix.asset }}/
+          cd release
+          zip -r ${{ matrix.asset }}.zip ${{ matrix.asset }}
 
-      - name: Archive (Windows)
+      - name: Stage release folder (Windows)
         if: runner.os == 'Windows'
-        run: Compress-Archive -Path ${{ matrix.output }} -DestinationPath ${{ matrix.asset }}.zip
+        run: |
+          mkdir release\${{ matrix.asset }}
+          copy ${{ matrix.output }} release\${{ matrix.asset }}\
+          xcopy assets release\${{ matrix.asset }}\assets\ /E /I
+          cd release
+          Compress-Archive -Path ${{ matrix.asset }} -DestinationPath ${{ matrix.asset }}.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset }}
-          path: ${{ matrix.asset }}.zip
+          path: release/${{ matrix.asset }}.zip
 
   release:
     name: Create Release
