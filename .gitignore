@@ -1,0 +1,47 @@
+# Odin build output
+FuzzyBuddyFarms
+FuzzyBuddyFarms.exe
+*.bin
+*.dll
+*.dylib
+*.so
+*.a
+*.lib
+*.obj
+*.o
+*.pdb
+*.ilk
+*.rdi
+*.dSYM/
+/bin/
+/build/
+/dist/
+
+# Odin generated docs
+docs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env / secrets
+.env
+.env.local
+*.log
+

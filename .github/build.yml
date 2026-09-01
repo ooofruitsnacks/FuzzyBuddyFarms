@@ -1,0 +1,98 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+env:
+  ODIN_PACKAGE_PATH: .
+  BINARY_NAME: FuzzyBuddyFarms
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: Linux (amd64)
+            target: linux_amd64
+            output: FuzzyBuddyFarms
+            asset: FuzzyBuddyFarms-linux-amd64
+
+          - os: windows-latest
+            name: Windows (amd64)
+            target: windows_amd64
+            output: FuzzyBuddyFarms.exe
+            asset: FuzzyBuddyFarms-windows-amd64
+
+          - os: macos-13
+            name: macOS (amd64)
+            target: darwin_amd64
+            output: FuzzyBuddyFarms
+            asset: FuzzyBuddyFarms-macos-amd64
+
+          - os: macos-latest
+            name: macOS (arm64)
+            target: darwin_arm64
+            output: FuzzyBuddyFarms
+            asset: FuzzyBuddyFarms-macos-arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Odin
+        uses: laytan/setup-odin@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release: latest
+
+      - name: Vet / check
+        run: odin check ${{ env.ODIN_PACKAGE_PATH }} -vet -strict-style
+
+      - name: Build
+        run: odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
+
+      - name: Archive (Unix)
+        if: runner.os != 'Windows'
+        run: zip -j ${{ matrix.asset }}.zip ${{ matrix.output }}
+
+      - name: Archive (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path ${{ matrix.output }} -DestinationPath ${{ matrix.asset }}.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}.zip
+
+  release:
+    name: Create Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.zip
+          generate_release_notes: true
+
