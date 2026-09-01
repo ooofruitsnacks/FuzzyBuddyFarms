@@ -35,7 +35,7 @@ jobs:
             output: FuzzyBuddyFarms.exe
             asset: FuzzyBuddyFarms-windows-amd64
 
-          - os: macos-13
+          - os: macos-15-intel
             name: macOS (amd64)
             target: darwin_amd64
             output: FuzzyBuddyFarms
