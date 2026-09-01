@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 // fuzzybuddyfarms v.0.2.60 demo
+||||||| 8837468
+// fbfonline_v02.odin online demo
+=======
+// fuzzybuddyfarms_v.0.2.60.odin online demo
+>>>>>>> c0ec1336da845160d8d42f504a9ccf3a99bcb021
 // an open source game created by Owen Edwards | ACS "a creative solution"
 // for everyone to enjoy :) work in progress
 package main

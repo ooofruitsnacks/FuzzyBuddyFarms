@@ -57,6 +57,26 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release: latest
 
+<<<<<<< HEAD
+||||||| 8837468
+      - name: Vet / check
+        run: odin check ${{ env.ODIN_PACKAGE_PATH }} -vet -strict-style
+
+=======
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
+            libasound2-dev
+            
+>>>>>>> c0ec1336da845160d8d42f504a9ccf3a99bcb021
       - name: Build
         run: odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
 
