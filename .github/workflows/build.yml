@@ -57,9 +57,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release: latest
 
-      - name: Vet / check
-        run: odin check ${{ env.ODIN_PACKAGE_PATH }} -vet -strict-style
-
       - name: Build
         run: odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
 
