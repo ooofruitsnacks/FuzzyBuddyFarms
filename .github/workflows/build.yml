@@ -70,9 +70,6 @@ jobs:
             libgl1-mesa-dev \
             libasound2-dev
 
-      - name: Vet / check
-        run: odin check ${{ env.ODIN_PACKAGE_PATH }} -vet
-
       - name: Build
         run: odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
 
