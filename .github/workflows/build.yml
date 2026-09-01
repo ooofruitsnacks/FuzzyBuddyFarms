@@ -57,6 +57,19 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release: latest
 
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
+            libasound2-dev
+            
       - name: Build
         run: odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
 
