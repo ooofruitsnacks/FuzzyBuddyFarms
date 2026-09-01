@@ -125,7 +125,7 @@ Double-click Fuzzybuddyfarms.exe to launch the game — no terminal required aft
 >Don't be alarmed if windows also pops up a scary warning when you go to run the exe. This build isn't signed with a Windows code-signing certificate, Windows SmartScreen may show a "Windows protected your PC" warning the first time you launch it. Click **More info**, then **Run anyway** to proceed. This is expected for unsigned open-source software and is safe to bypass here.
 
 
-## Linux (amd64/arm64)
+## Linux (aarch64)
 
 Please ensure you have ```Odin``` and ```Clang``` downloaded, along with a few system libraries needed for linking.
 
