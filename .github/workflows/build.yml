@@ -35,17 +35,25 @@ jobs:
             output: FuzzyBuddyFarms.exe
             asset: FuzzyBuddyFarms-windows-amd64
 
-          - os: macos-15-intel
-            name: macOS (amd64)
-            target: darwin_amd64
-            output: FuzzyBuddyFarms
-            asset: FuzzyBuddyFarms-macos-amd64
+          - name: Bundle .app (macOS)
+            if: runner.os == 'macOS'
+            run: |
+              APP="release/${{ matrix.asset }}/FuzzyBuddyFarms.app"
+              mkdir -p "$APP/Contents/MacOS"
+              mkdir -p "$APP/Contents/Resources"
 
-          - os: macos-latest
-            name: macOS (arm64)
-            target: darwin_arm64
-            output: FuzzyBuddyFarms
-            asset: FuzzyBuddyFarms-macos-arm64
+              cp ${{ matrix.output }} "$APP/Contents/MacOS/"
+              cp packaging/macos/Info.plist "$APP/Contents/Info.plist"
+              cp packaging/macos/icon.icns "$APP/Contents/Resources/"
+              cp -r assets "$APP/Contents/Resources/"
+
+              chmod +x "$APP/Contents/MacOS/FuzzyBuddyFarms"
+
+              codesign --force --deep --sign - "$APP"
+
+              cd release
+              zip -r ${{ matrix.asset }}.zip "${{ matrix.asset }}"
+
 
     steps:
       - name: Checkout repository
@@ -110,9 +118,11 @@ jobs:
         with:
           path: artifacts
 
+      - name: List downloaded artifacts (debug)
+        run: find artifacts -type f
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*.zip
           generate_release_notes: true
-

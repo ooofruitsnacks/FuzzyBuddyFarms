@@ -7,9 +7,24 @@ import "core:fmt"
 import "core:math"
 import "core:math/rand"
 import "core:mem"
-import "core:os"
 import "core:strings"
 import rl "vendor:raylib"
+import "core:os"
+import "core:path/filepath"
+
+get_resource_path :: proc(relative: string) -> string {
+    exe_path := os.args[0]
+    exe_dir := filepath.dir(exe_path)
+
+    when ODIN_OS == .Darwin {
+        path, _ := filepath.join({exe_dir, "..", "Resources", relative})
+        return path
+    } else {
+        path, _ := filepath.join({exe_dir, relative})
+        return path
+    }
+}
+
 
 // constants
 
@@ -1069,8 +1084,6 @@ COL_WALL_MID     :: rl.Color{120, 130, 115, 255}
 COL_WALL_LIGHT   :: rl.Color{175, 185, 165, 255}
 HEADLIGHT_COL    :: rl.Color{255, 250, 210, 255}
 TAILLIGHT_COL    :: rl.Color{200,  30,  30, 255}
-
-
 
 // helpers
 
