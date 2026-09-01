@@ -16,9 +16,40 @@ You spawn into Honeyville with a small plot of land to get started. The starting
 # Download :honeybee:
 
 >[!NOTE]
->FuzzyBuddyFarms will be available on steam as well! 
+>FuzzyBuddyFarms will be available on steam as well!
 
-## Clone repo
+Go to the release section of FuzzyBuddyFarms.
+
+<img width="376" height="153" alt="Screenshot 2026-09-01 at 12 35 23 PM" src="https://github.com/user-attachments/assets/00a3d533-335c-4215-a335-7c946307e2f5" />
+
+Click on the zip file for your hardware architecture and download that zip file. 
+
+<img width="1236" height="515" alt="Screenshot 2026-09-01 at 12 44 04 PM" src="https://github.com/user-attachments/assets/9de708d5-ced2-488c-ae77-b1bba0fc3056" />
+
+For Apple users, it will flash a spooky warning message but don't be alarmed. 
+
+This is just because it is not verified by Apple directly, good news everything is completely open source so you can verify everything yourself. 
+
+Close out of the spooky scary urgent warning message and locate "Privacy and Security", about mid way down in the main menu.
+
+<img width="221" height="110" alt="Screenshot 2026-09-01 at 12 39 22 PM" src="https://github.com/user-attachments/assets/6878a18c-8777-4325-827c-fd9b6a8250c5" />
+
+Scroll all the way down and find:
+
+<img width="479" height="184" alt="Screenshot 2026-09-01 at 12 33 09 PM" src="https://github.com/user-attachments/assets/b4aa33c0-b0a1-43aa-9b72-91390c1b1771" />
+
+Click open anyway and it will open another prompt window. 
+
+Click "Open Anyway" again in the window and then relaunch FuzzyBuddyFarms. It will now open and run the game.
+
+<img width="276" height="355" alt="Screenshot 2026-09-01 at 12 33 20 PM" src="https://github.com/user-attachments/assets/66c7920c-e082-4e64-ad0b-41b2c09adca8" />
+
+
+# Build From Source
+
+If you don't trust pre-bundled packages or if you want to make your own changes to the source code to have a more unique bee farming experience, you can do so easily by building from source for your machine. Below is a full step by step guide to build from source. Enjoy :)
+
+## macOS (arm64)
 
 If you don't use steam and want to download it directly from github, don't worry it's very easy!
 
