@@ -112,8 +112,6 @@ jobs:
 
       - name: List downloaded artifacts (debug)
         run: find artifacts -type f
-      - name: Build
-        run: odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
