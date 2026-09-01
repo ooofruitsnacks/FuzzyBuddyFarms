@@ -1,10 +1,9 @@
 # Welcome to Honeyville! :honey_pot: :tada: :honeybee:
 
-Please go to the Wiki section for a complete guide of the game with tips, key binds, easter eggs, and information on the story-line. 
+Please go to the Wiki section for a complete guide of the game with tips, key binds, easter eggs, and information on the story-line. A lot of time and passion has gone into this project. I hope you enjoy it! :tada:
 
 I'm the only person building, testing, and improving this game so please be patient lol. I created FuzzyBuddyFarms because I wanted to learn Odin and because I wanted to try to build a real video game. My approach is a little different compared to other conventional video games, the entire game consists of 1 single odin file and only 1 asset. The asset was added as an easter egg and originally I was against using assets but I made one exception. There are no shaders, physics engines, or API calls. Everything is rendered and drawn using Raylib with vector math. This was done intentionally so anyone can play this game on any machine. You can run this game on pretty much any hardware from the past 2 decades.
 
-A lot of time and passion has gone into this project, I hope you enjoy it! :tada:
 
 ## How to play :honeybee:
 
