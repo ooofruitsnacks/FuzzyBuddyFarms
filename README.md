@@ -90,3 +90,87 @@ Then run to build an executable. This will not build unless you have Odin instal
 ```
 odin build . -out:FUZZYBUDDYFARMS -o:speed && odin build . -out:FUZZYBUDDYFARMS -o:speed -extra-linker-flags:"-rpath @executable_path"
 ```
+
+## Windows (amd64)
+
+Please ensure you have ```Odin``` downloaded and installed, along with the ```MSVC``` compiler and Windows SDK.
+
+For information about Odin on Windows visit ``` https://odin-lang.org/docs/install/ ``` and follow the Windows section to install it, along with Odin itself if you haven't already.
+
+Open a new Command Prompt or PowerShell window and create a directory/folder for FuzzyBuddyFarms to be stored into.
+
+```
+cd
+mkdir fuzzybuddyfarms
+```
+
+Now clone the repo into that directory.
+
+```
+git clone https://github.com/ooofruitsnacks/FuzzyBuddyFarms.git
+```
+
+Now within the fuzzybuddyfarms directory/folder, to create an executable version of the game run:
+
+```
+odin build . -out:FuzzyBuddyFarms.exe -o:speed
+```
+
+
+Once it finishes, you'll find ```FuzzyBuddyFarms.exe``` sitting in the folder alongside the ```assets``` directory.
+
+Double-click Fuzzybuddyfarms.exe to launch the game — no terminal required after this point.
+
+>[!WARNING]
+>Don't be alarmed if windows also pops up a scary warning when you go to run the exe. This build isn't signed with a Windows code-signing certificate, Windows SmartScreen may show a "Windows protected your PC" warning the first time you launch it. Click **More info**, then **Run anyway** to proceed. This is expected for unsigned open-source software and is safe to bypass here.
+
+
+## Linux (amd64/arm64)
+
+Please ensure you have ```Odin``` and ```Clang``` downloaded, along with a few system libraries needed for linking.
+
+Open a new terminal and run (debian/ubuntu):
+
+```
+sudo apt update
+sudo apt install -y clang libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libasound2-dev
+```
+
+
+If you don't have Odin installed yet, please visit ``` https://odin-lang.org/docs/install/ ``` to install the Odin language or build it from source, this is needed so you can build your release as an executable.
+
+Open your terminal again and create a directory/folder for FuzzyBuddyFarms to be stored into.
+
+```
+cd
+mkdir fuzzybuddyfarms
+```
+
+Now run:
+
+```
+cd fuzzybuddyfarms
+git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
+```
+
+After the game has finished cloning into the directory, run:
+
+```
+odin build . -out:FuzzyBuddyFarms -o:speed
+```
+
+Once it finishes, you'll find an executable named ```FuzzyBuddyFarms``` in the folder alongside the ```assets``` directory. You can launch it directly from the terminal using:
+
+```
+./FuzzyBuddyFarms
+```
+
+Or make it executable from your file manager by right-clicking it → Properties → Permissions → "Allow executing file as program" (steps vary slightly by desktop environment), so you can double-click to launch the program.
+
+Enjoy the game!
+
+
+
+
+
+
