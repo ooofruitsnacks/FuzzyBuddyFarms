@@ -78,19 +78,13 @@ jobs:
 
       - name: Install ARM64 cross-compilation tools
         if: matrix.target == 'linux_arm64'
-        shell: bash
         run: |
           sudo dpkg --add-architecture arm64
+
           CODENAME=$(lsb_release -cs)
 
-          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-            sudo sed -i '/^Types:/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
-          fi
-
-          if [ -f /etc/apt/sources.list ] && [ -s /etc/apt/sources.list ]; then
-            sudo sed -i "s/^deb /deb [arch=amd64] /" /etc/apt/sources.list
-            sudo sed -i "s/^deb-src /deb-src [arch=amd64] /" /etc/apt/sources.list
-          fi
+          sudo sed -i "s/^deb /deb [arch=amd64] /" /etc/apt/sources.list
+          sudo sed -i "s/^deb-src /deb-src [arch=amd64] /" /etc/apt/sources.list
 
           sudo tee /etc/apt/sources.list.d/arm64.list > /dev/null <<EOF
           deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${CODENAME} main restricted universe multiverse
@@ -102,6 +96,7 @@ jobs:
           sudo apt-get update
 
           sudo apt-get install -y \
+            lld \
             gcc-aarch64-linux-gnu \
             g++-aarch64-linux-gnu \
             libc6-dev-arm64-cross \
@@ -112,12 +107,11 @@ jobs:
             libxi-dev:arm64 \
             libgl1-mesa-dev:arm64 \
             libasound2-dev:arm64
-
       - name: Build
-        shell: bash
         run: |
           if [ "${{ matrix.target }}" = "linux_arm64" ]; then
-            odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed -extra-linker-flags:"-L/usr/lib/aarch64-linux-gnu"
+            odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed \
+              -extra-linker-flags:"-fuse-ld=lld --target=aarch64-linux-gnu --sysroot=/usr/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu"
           else
             odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
           fi
