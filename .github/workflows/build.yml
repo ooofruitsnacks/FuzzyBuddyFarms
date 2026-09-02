@@ -128,9 +128,9 @@ jobs:
         run: |
           set -e
           GCC_DIR=$(dirname $(aarch64-linux-gnu-gcc -print-libgcc-file-name))
-        echo "Using GCC cross dir: $GCC_DIR"
-        odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed \
-          -extra-linker-flags:"-fuse-ld=lld --target=aarch64-linux-gnu --sysroot=/usr/aarch64-linux-gnu --gcc-toolchain=/usr -B${GCC_DIR} -L${GCC_DIR} -L/usr/lib/aarch64-linux-gnu -L/usr/aarch64-linux-gnu/lib"
+          echo "Using GCC cross dir: $GCC_DIR"
+          odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed \
+            -extra-linker-flags:"-fuse-ld=lld --target=aarch64-linux-gnu --sysroot=/usr/aarch64-linux-gnu --gcc-toolchain=/usr -B${GCC_DIR} -L${GCC_DIR} -L/usr/lib/aarch64-linux-gnu -L/usr/aarch64-linux-gnu/lib"
 
 
       - name: Build
