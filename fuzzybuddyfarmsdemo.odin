@@ -1,4 +1,4 @@
-// FuzzyBuddyFarms beta demo v.0.2.2
+// fuzzybuddyfarms_v.0.2.60.odin online demo
 // an open source game created by Owen Edwards | ACS "a creative solution"
 // for everyone to enjoy :) work in progress
 package main
@@ -7,9 +7,24 @@ import "core:fmt"
 import "core:math"
 import "core:math/rand"
 import "core:mem"
-import "core:os"
 import "core:strings"
 import rl "vendor:raylib"
+import "core:os"
+import "core:path/filepath"
+
+get_resource_path :: proc(relative: string) -> string {
+    exe_path := os.args[0]
+    exe_dir := filepath.dir(exe_path)
+
+    when ODIN_OS == .Darwin {
+        path, _ := filepath.join({exe_dir, "..", "Resources", relative})
+        return path
+    } else {
+        path, _ := filepath.join({exe_dir, relative})
+        return path
+    }
+}
+
 
 // constants
 
@@ -1069,8 +1084,6 @@ COL_WALL_MID     :: rl.Color{120, 130, 115, 255}
 COL_WALL_LIGHT   :: rl.Color{175, 185, 165, 255}
 HEADLIGHT_COL    :: rl.Color{255, 250, 210, 255}
 TAILLIGHT_COL    :: rl.Color{200,  30,  30, 255}
-
-
 
 // helpers
 
@@ -9747,1757 +9760,6 @@ draw_cars :: proc() {
 
 // DRAW BUILDING (INTERIOR)
 
-interior_room_size :: proc(bt: BuildingType) -> (f32, f32) {
-    #partial switch bt {
-    case .BeeSanctuary, .FuzzyBuddyFactory:
-        return 520, 340
-
-    case .Market,
-         .SheriffOffice,
-         .DoctorOffice,
-         .Bank,
-         .Diner,
-         .Bar,
-         .CarDealership:
-        return 300, 220
-    }
-
-    return 300, 220
-}
-
-
-int16_light :: proc(
-    x, y: i32,
-    active: bool,
-    bright, dim: rl.Color,
-) {
-    // Dark square fixture.
-    rl.DrawRectangle(x-5, y-3, 11, 7, {18, 19, 24, 255})
-    rl.DrawRectangle(x-4, y-2, 9, 5, dim)
-
-    if active {
-        // Square pixel glow.
-        rl.DrawRectangle(
-            x-7,
-            y-1,
-            15,
-            3,
-            {bright.r, bright.g, bright.b, 42},
-        )
-        rl.DrawRectangle(
-            x-1,
-            y-5,
-            3,
-            11,
-            {bright.r, bright.g, bright.b, 32},
-        )
-
-        rl.DrawRectangle(x-3, y-1, 7, 3, bright)
-        rl.DrawRectangle(x-2, y-1, 2, 1, rl.WHITE)
-    } else {
-        rl.DrawRectangle(x-3, y-1, 7, 3, dim)
-    }
-}
-
-
-int16_sign :: proc(
-    x, y, w, h: i32,
-    label: string,
-    background, foreground: rl.Color,
-    t, phase: f32,
-) {
-    // Pixel-stepped frame.
-    rl.DrawRectangle(x-3, y+2, w+6, h-4, {23, 24, 29, 255})
-    rl.DrawRectangle(x-1, y, w+2, h, {79, 84, 90, 255})
-    rl.DrawRectangle(x, y+1, w, h-2, background)
-
-    // Animated vertical shine.
-    shine_range := f32(w+12)
-    shine_x := i32(math.mod(t*18.0+phase, shine_range))-6
-
-    rl.BeginScissorMode(x, y+1, w, h-2)
-    rl.DrawRectangle(
-        x+shine_x,
-        y+1,
-        4,
-        h-2,
-        {255, 255, 255, 55},
-    )
-    rl.EndScissorMode()
-
-    text_w := rl.MeasureText(
-        strings.clone_to_cstring(label, context.temp_allocator),
-        8,
-    )
-
-    draw_retro_text(
-        label,
-        x+w/2-text_w/2,
-        y+h/2-4,
-        8,
-        foreground,
-    )
-}
-int16_floor :: proc(
-    x, y, w, h: i32,
-    first, second: rl.Color,
-) {
-    tile_size: i32 = 16
-
-    for row: i32 = 0; row*tile_size < h; row += 1 {
-        for col: i32 = 0; col*tile_size < w; col += 1 {
-            tile_col := first
-            if (row+col)%2 != 0 {
-                tile_col = second
-            }
-
-            tx := x+col*tile_size
-            ty := y+row*tile_size
-
-            rl.DrawRectangle(tx, ty, tile_size-1, tile_size-1, tile_col)
-            rl.DrawRectangle(
-                tx+1,
-                ty+1,
-                tile_size-3,
-                1,
-                {255, 255, 255, 18},
-            )
-        }
-    }
-}
-
-int16_plant :: proc(x, y: i32, t, phase: f32) {
-    sway := i32(math.sin(t*1.5+phase)*2.0)
-
-    // Terracotta pot.
-    rl.DrawRectangle(x-8, y-12, 17, 4, {82, 46, 31, 255})
-    rl.DrawRectangle(x-6, y-8, 13, 9, {159, 82, 51, 255})
-    rl.DrawRectangle(x-5, y-7, 11, 2, {200, 108, 65, 255})
-    rl.DrawRectangle(x-4, y-2, 9, 3, {110, 57, 38, 255})
-
-    // Stem.
-    rl.DrawRectangle(x, y-29, 2, 18, {38, 104, 49, 255})
-
-    // Chunky leaves.
-    rl.DrawRectangle(x-10+sway, y-28, 10, 6, {46, 139, 58, 255})
-    rl.DrawRectangle(x-7+sway, y-32, 7, 6, {71, 172, 78, 255})
-
-    rl.DrawRectangle(x+2-sway, y-25, 10, 6, {39, 119, 51, 255})
-    rl.DrawRectangle(x+3-sway, y-30, 7, 6, {62, 158, 70, 255})
-
-    rl.DrawRectangle(x-4, y-37, 10, 8, {72, 176, 79, 255})
-    rl.DrawRectangle(x-2, y-39, 6, 3, {113, 202, 105, 255})
-}
-
-
-int16_produce_crate :: proc(
-    x, y: i32,
-    produce_col: rl.Color,
-    t, phase: f32,
-) {
-    // Wooden crate.
-    rl.DrawRectangle(x-2, y-2, 65, 30, {48, 31, 21, 255})
-    rl.DrawRectangle(x, y, 61, 26, {150, 94, 46, 255})
-    rl.DrawRectangle(x+3, y+4, 55, 17, {91, 58, 32, 255})
-    rl.DrawRectangle(x+2, y+20, 57, 4, {193, 127, 65, 255})
-
-    // Seven pieces of animated produce.
-    for item: i32 = 0; item < 7; item += 1 {
-        item_x := x+5+item*8
-        item_y := y+6+(item%2)*6
-        bob := i32(math.sin(t*2.0+phase+f32(item))*1.0)
-
-        rl.DrawRectangle(
-            item_x,
-            item_y+bob,
-            6,
-            6,
-            {43, 74, 35, 255},
-        )
-        rl.DrawRectangle(
-            item_x+1,
-            item_y+1+bob,
-            5,
-            5,
-            produce_col,
-        )
-        rl.DrawRectangle(
-            item_x+2,
-            item_y-1+bob,
-            2,
-            2,
-            {48, 132, 52, 255},
-        )
-        rl.DrawRectangle(
-            item_x+2,
-            item_y+2+bob,
-            1,
-            1,
-            {255, 255, 255, 95},
-        )
-    }
-}
-
-
-int16_takeout_bag :: proc(
-    x, y: i32,
-    bag_col, logo_col: rl.Color,
-) {
-    // Handles.
-    rl.DrawRectangle(x+3, y-5, 2, 6, {76, 50, 29, 255})
-    rl.DrawRectangle(x+10, y-5, 2, 6, {76, 50, 29, 255})
-    rl.DrawRectangle(x+4, y-6, 7, 2, {76, 50, 29, 255})
-
-    // Bag outline and body.
-    rl.DrawRectangle(x-1, y-1, 17, 18, {38, 29, 22, 255})
-    rl.DrawRectangle(x, y, 15, 16, bag_col)
-    rl.DrawRectangle(x+1, y+1, 13, 2, {238, 207, 147, 255})
-    rl.DrawRectangle(x+2, y+14, 11, 1, {145, 104, 60, 255})
-
-    // Cute pixel restaurant logo.
-    rl.DrawRectangle(x+5, y+6, 6, 6, logo_col)
-    rl.DrawRectangle(x+6, y+5, 4, 8, logo_col)
-    rl.DrawRectangle(x+7, y+7, 2, 4, {255, 221, 126, 255})
-}
-
-
-int16_money_stack :: proc(x, y: i32, sparkle: bool) {
-    for layer: i32 = 0; layer < 3; layer += 1 {
-        layer_y := y-layer*4
-        layer_x := x+(layer%2)
-
-        rl.DrawRectangle(
-            layer_x-1,
-            layer_y-1,
-            24,
-            6,
-            {22, 38, 27, 255},
-        )
-        rl.DrawRectangle(
-            layer_x,
-            layer_y,
-            22,
-            4,
-            {54, 155, 77, 255},
-        )
-        rl.DrawRectangle(
-            layer_x+2,
-            layer_y+1,
-            18,
-            1,
-            {113, 215, 127, 255},
-        )
-        rl.DrawRectangle(
-            layer_x+9,
-            layer_y,
-            4,
-            4,
-            {230, 206, 112, 255},
-        )
-    }
-
-    if sparkle {
-        rl.DrawRectangle(x+24, y-16, 2, 10, {255, 244, 145, 255})
-        rl.DrawRectangle(x+20, y-12, 10, 2, {255, 244, 145, 255})
-        rl.DrawRectangle(x+23, y-13, 4, 4, rl.WHITE)
-    }
-}
-
-
-int16_gold_stack :: proc(x, y: i32, sparkle: bool) {
-    gold      := rl.Color{232, 174, 29, 255}
-    gold_hi   := rl.Color{255, 223, 78, 255}
-    gold_dark := rl.Color{148, 94, 16, 255}
-
-    for bar: i32 = 0; bar < 3; bar += 1 {
-        bx := x+bar*14
-
-        rl.DrawRectangle(bx-1, y-1, 13, 9, gold_dark)
-        rl.DrawRectangle(bx, y, 11, 7, gold)
-        rl.DrawRectangle(bx+2, y+1, 7, 2, gold_hi)
-    }
-
-    for bar: i32 = 0; bar < 2; bar += 1 {
-        bx := x+7+bar*14
-
-        rl.DrawRectangle(bx-1, y-9, 13, 9, gold_dark)
-        rl.DrawRectangle(bx, y-8, 11, 7, gold)
-        rl.DrawRectangle(bx+2, y-7, 7, 2, gold_hi)
-    }
-
-    if sparkle {
-        rl.DrawRectangle(x+36, y-16, 2, 10, {255, 245, 151, 255})
-        rl.DrawRectangle(x+32, y-12, 10, 2, {255, 245, 151, 255})
-        rl.DrawRectangle(x+35, y-13, 4, 4, rl.WHITE)
-    }
-}
-
-
-int16_security_camera :: proc(
-    x, y: i32,
-    face_right: bool,
-    active: bool,
-) {
-    // Wall mount.
-    rl.DrawRectangle(x-2, y-2, 5, 12, {49, 54, 58, 255})
-
-    body_x := x+7
-    if !face_right {
-        body_x = x-18
-    }
-
-    rl.DrawRectangle(body_x-1, y+5, 13, 10, {26, 29, 33, 255})
-    rl.DrawRectangle(body_x, y+6, 11, 8, {157, 166, 170, 255})
-    rl.DrawRectangle(body_x+2, y+7, 7, 2, {216, 222, 223, 255})
-
-    lens_x := body_x+10
-    if !face_right {
-        lens_x = body_x
-    }
-
-    lens_col := rl.Color{255, 49, 44, 255}
-    if !active {
-        lens_col = {84, 27, 27, 255}
-    }
-
-    rl.DrawRectangle(lens_x-1, y+7, 3, 6, {19, 20, 23, 255})
-    rl.DrawRectangle(lens_x, y+8, 1, 4, lens_col)
-}
-
-
-int16_medical_monitor :: proc(x, y: i32, t, phase: f32) {
-    rl.DrawRectangle(x-2, y-2, 64, 29, {37, 43, 47, 255})
-    rl.DrawRectangle(x, y, 60, 23, {5, 18, 17, 255})
-    rl.DrawRectangle(x+23, y+25, 14, 4, {74, 82, 87, 255})
-
-    scroll := math.mod(t*31.0+phase, 18.0)
-    previous_x := x
-    previous_y := y+12
-
-    for i: i32 = 0; i < 60; i += 1 {
-        px := x+i
-        wave := math.mod(f32(i)+scroll, 18.0)
-        py := y+12
-
-        if wave >= 7.0 && wave < 9.0 {
-            py = y+4
-        } else if wave >= 9.0 && wave < 11.0 {
-            py = y+20
-        } else if wave >= 11.0 && wave < 13.0 {
-            py = y+9
-        }
-
-        if i > 0 {
-            rl.DrawLine(
-                previous_x,
-                previous_y,
-                px,
-                py,
-                {61, 255, 128, 255},
-            )
-        }
-
-        previous_x = px
-        previous_y = py
-    }
-
-    pulse := math.mod(t*4.0, 1.0) < 0.5
-    pulse_col := rl.Color{255, 196, 44, 255}
-    if !pulse {
-        pulse_col = {91, 69, 22, 255}
-    }
-
-    rl.DrawRectangle(x+53, y+3, 3, 3, pulse_col)
-}
-
-
-int16_hospital_bed :: proc(
-    x, y: i32,
-    blanket: rl.Color,
-) {
-    // Supports and wheels.
-    rl.DrawRectangle(x+7, y+16, 3, 9, {72, 81, 88, 255})
-    rl.DrawRectangle(x+53, y+16, 3, 9, {72, 81, 88, 255})
-    rl.DrawCircle(x+8, y+26, 3, {27, 29, 32, 255})
-    rl.DrawCircle(x+54, y+26, 3, {27, 29, 32, 255})
-
-    // Metal frame.
-    rl.DrawRectangle(x-2, y+13, 65, 6, {68, 78, 85, 255})
-
-    // Mattress, blanket and pillow.
-    rl.DrawRectangle(x, y+6, 60, 9, {223, 232, 231, 255})
-    rl.DrawRectangle(x+17, y+8, 40, 7, blanket)
-    rl.DrawRectangle(x+3, y+4, 15, 8, {244, 244, 236, 255})
-    rl.DrawRectangle(x+5, y+5, 11, 2, rl.WHITE)
-
-    // Bed rails.
-    rl.DrawRectangle(x-3, y, 4, 20, {105, 125, 134, 255})
-    rl.DrawRectangle(x+60, y+3, 4, 17, {105, 125, 134, 255})
-}
-
-int16_draw_market :: proc(x, y, w, h: i32, t: f32) {
-    green  := rl.Color{51, 142, 65, 255}
-    yellow := rl.Color{255, 218, 69, 255}
-
-    // Wooden wall slats.
-    for slat_y: i32 = y+4; slat_y < y+55; slat_y += 9 {
-        rl.DrawRectangle(x+5, slat_y, w-10, 7, {120, 78, 43, 255})
-        rl.DrawRectangle(x+5, slat_y, w-10, 1, {175, 119, 64, 255})
-    }
-
-    int16_sign(
-        x+w/2-67,
-        y+5,
-        134,
-        20,
-        "MARKET",
-        green,
-        rl.WHITE,
-        t,
-        0,
-    )
-
-    sign_flash := i32(t*4.0)%2 == 0
-
-    int16_light(
-        x+w/2-76,
-        y+15,
-        sign_flash,
-        yellow,
-        {83, 68, 24, 255},
-    )
-    int16_light(
-        x+w/2+76,
-        y+15,
-        !sign_flash,
-        yellow,
-        {83, 68, 24, 255},
-    )
-
-    // Warm pendant lights.
-    for lamp: i32 = 0; lamp < 4; lamp += 1 {
-        lamp_x := x+33+lamp*78
-        lamp_on := (i32(t*3.0)+lamp)%7 != 0
-
-        rl.DrawRectangle(lamp_x, y+1, 2, 12, {53, 48, 39, 255})
-        int16_light(
-            lamp_x+1,
-            y+15,
-            lamp_on,
-            {255, 227, 147, 255},
-            {88, 69, 41, 255},
-        )
-    }
-
-    // Two rows of colorful fresh produce.
-    int16_produce_crate(x+13,  y+42, {224, 58, 45, 255}, t, 0.0)
-    int16_produce_crate(x+83,  y+42, {239, 179, 38, 255}, t, 1.0)
-    int16_produce_crate(x+153, y+42, {77, 183, 70, 255}, t, 2.0)
-    int16_produce_crate(x+223, y+42, {150, 77, 187, 255}, t, 3.0)
-
-    int16_produce_crate(x+24,  y+78, {238, 217, 66, 255}, t, 4.0)
-    int16_produce_crate(x+94,  y+78, {223, 91, 45, 255}, t, 5.0)
-    int16_produce_crate(x+164, y+78, {91, 197, 88, 255}, t, 6.0)
-
-    // Animated cooling mist.
-    for mist: i32 = 0; mist < 8; mist += 1 {
-        mist_x := x+18+mist*36
-        rise := i32(math.mod(t*11.0+f32(mist)*7.0, 24.0))
-        sway := i32(math.sin(t*1.6+f32(mist))*3.0)
-
-        rl.DrawRectangle(
-            mist_x+sway,
-            y+111-rise,
-            2,
-            2,
-            {211, 243, 247, 125},
-        )
-    }
-
-    // Checkout counter.
-    rl.DrawRectangle(x+13, y+122, w-26, 25, {61, 39, 27, 255})
-    rl.DrawRectangle(x+16, y+125, w-32, 20, {150, 89, 45, 255})
-    rl.DrawRectangle(x+10, y+119, w-20, 7, {196, 130, 66, 255})
-
-    // Register.
-    register_on := math.mod(t, 1.2) < 0.8
-
-    rl.DrawRectangle(x+w-55, y+104, 31, 17, {44, 47, 48, 255})
-    rl.DrawRectangle(x+w-50, y+98, 21, 9, {68, 72, 73, 255})
-    rl.DrawRectangle(x+w-47, y+100, 15, 4, {11, 34, 20, 255})
-
-    int16_light(
-        x+w-32,
-        y+101,
-        register_on,
-        {71, 255, 105, 255},
-        {25, 78, 35, 255},
-    )
-
-    draw_retro_text(
-        "Farm fresh fruit, vegetables and honey!",
-        x+15,
-        y+153,
-        7,
-        {255, 238, 184, 255},
-    )
-}
-
-
-int16_draw_carryout :: proc(x, y, w, h: i32, t: f32) {
-    red   := rl.Color{199, 49, 40, 255}
-    amber := rl.Color{255, 190, 53, 255}
-    green := rl.Color{67, 255, 108, 255}
-
-    // Cream kitchen tiles.
-    for row: i32 = 0; row < 7; row += 1 {
-        for col: i32 = 0; col < 20; col += 1 {
-            tile_x := x+col*16
-            if row%2 != 0 {
-                tile_x -= 8
-            }
-
-            tile_y := y+row*10
-
-            rl.DrawRectangle(
-                tile_x,
-                tile_y,
-                15,
-                9,
-                {221, 201, 160, 255},
-            )
-            rl.DrawRectangle(
-                tile_x,
-                tile_y,
-                15,
-                1,
-                {247, 231, 193, 255},
-            )
-        }
-    }
-
-    int16_sign(
-        x+w/2-75,
-        y+5,
-        150,
-        21,
-        "CARRY OUT",
-        red,
-        rl.WHITE,
-        t,
-        10,
-    )
-
-    sign_flash := i32(t*4.0)%2 == 0
-
-    int16_light(
-        x+w/2-84,
-        y+15,
-        sign_flash,
-        amber,
-        {94, 59, 20, 255},
-    )
-    int16_light(
-        x+w/2+84,
-        y+15,
-        !sign_flash,
-        amber,
-        {94, 59, 20, 255},
-    )
-
-    // Kitchen pass-through window.
-    rl.DrawRectangle(x+9, y+35, 121, 58, {31, 32, 35, 255})
-    rl.DrawRectangle(x+13, y+39, 113, 49, {102, 108, 109, 255})
-
-    for metal_y: i32 = y+42; metal_y < y+86; metal_y += 6 {
-        rl.DrawLine(x+15, metal_y, x+124, metal_y, {139, 144, 144, 255})
-    }
-
-    heat_flash := i32(t*5.0)%2 == 0
-
-    int16_light(
-        x+41,
-        y+49,
-        heat_flash,
-        {255, 143, 36, 255},
-        {101, 44, 16, 255},
-    )
-    int16_light(
-        x+98,
-        y+49,
-        !heat_flash,
-        {255, 143, 36, 255},
-        {101, 44, 16, 255},
-    )
-
-    rl.DrawRectangle(x+8, y+84, 122, 8, {49, 52, 54, 255})
-    rl.DrawRectangle(x+10, y+84, 118, 2, {210, 215, 212, 255})
-
-    // Order status board.
-    board_x := x+143
-    board_y := y+36
-    board_w: i32 = 144
-
-    rl.DrawRectangle(
-        board_x-2,
-        board_y-2,
-        board_w+4,
-        54,
-        {26, 28, 32, 255},
-    )
-    rl.DrawRectangle(
-        board_x,
-        board_y,
-        board_w,
-        50,
-        {5, 16, 10, 255},
-    )
-
-    draw_retro_text(
-        "ORDERS READY",
-        board_x+30,
-        board_y+4,
-        8,
-        amber,
-    )
-
-    active_order := i32(t/1.8)%4
-
-    for order: i32 = 0; order < 4; order += 1 {
-        order_x := board_x+8+order*34
-        active := order == active_order
-
-        number_col := rl.Color{31, 92, 44, 255}
-        if active {
-            number_col = green
-        }
-
-        rl.DrawRectangle(
-            order_x-2,
-            board_y+19,
-            28,
-            20,
-            {8, 35, 17, 255},
-        )
-
-        switch order {
-        case 0:
-            draw_retro_text("12", order_x+5, board_y+24, 8, number_col)
-        case 1:
-            draw_retro_text("18", order_x+5, board_y+24, 8, number_col)
-        case 2:
-            draw_retro_text("24", order_x+5, board_y+24, 8, number_col)
-        case 3:
-            draw_retro_text("31", order_x+5, board_y+24, 8, number_col)
-        }
-
-        if active {
-            rl.DrawRectangle(order_x-2, board_y+42, 28, 2, green)
-        }
-    }
-
-    // Moving kitchen conveyor.
-    conveyor_y := y+100
-
-    rl.DrawRectangle(x+14, conveyor_y, w-28, 8, {35, 38, 41, 255})
-    rl.DrawRectangle(x+14, conveyor_y, w-28, 2, {105, 111, 114, 255})
-
-    roller_scroll := i32(math.mod(t*20.0, 12.0))
-
-    for roller_x: i32 = x+18-roller_scroll;
-        roller_x < x+w-18;
-        roller_x += 12
-    {
-        rl.DrawRectangle(
-            roller_x,
-            conveyor_y+3,
-            7,
-            3,
-            {127, 133, 135, 255},
-        )
-    }
-
-    moving_bag_x := x+22+i32(math.mod(t*19.0, f32(w-74)))
-
-    int16_takeout_bag(
-        moving_bag_x,
-        conveyor_y-17,
-        {210, 172, 104, 255},
-        red,
-    )
-
-    // Long pickup counter.
-    counter_y := y+125
-
-    rl.DrawRectangle(x+10, counter_y, w-20, 27, {62, 30, 28, 255})
-    rl.DrawRectangle(x+12, counter_y+3, w-24, 22, red)
-    rl.DrawRectangle(x+7, counter_y-4, w-14, 8, {226, 201, 151, 255})
-
-    for pickup: i32 = 0; pickup < 3; pickup += 1 {
-        station_x := x+27+pickup*96
-        station_active := pickup == active_order%3
-        bob := i32(math.sin(t*3.0+f32(pickup))*1.5)
-
-        int16_takeout_bag(
-            station_x,
-            counter_y-22+bob,
-            {214, 175, 105, 255},
-            red,
-        )
-
-        int16_light(
-            station_x+40,
-            counter_y+13,
-            station_active,
-            green,
-            {24, 70, 34, 255},
-        )
-    }
-
-    draw_retro_text(
-        "Order here - pick up when your number flashes!",
-        x+15,
-        y+160,
-        7,
-        {255, 229, 180, 255},
-    )
-}
-
-
-int16_draw_nightclub :: proc(x, y, w, h: i32, t: f32) {
-    pink   := rl.Color{255, 51, 176, 255}
-    cyan   := rl.Color{46, 224, 255, 255}
-    violet := rl.Color{139, 64, 255, 255}
-    lime   := rl.Color{82, 255, 135, 255}
-
-    // Dark padded wall.
-    for panel_x: i32 = x+4; panel_x < x+w-4; panel_x += 24 {
-        rl.DrawRectangle(panel_x, y+4, 22, 57, {31, 23, 49, 255})
-        rl.DrawRectangle(panel_x+2, y+6, 18, 2, {55, 38, 78, 255})
-        rl.DrawRectangle(panel_x+10, y+22, 2, 2, {79, 49, 103, 255})
-    }
-
-    neon_step := i32(t*4.0)%3
-    neon_col := pink
-
-    if neon_step == 1 {
-        neon_col = cyan
-    } else if neon_step == 2 {
-        neon_col = violet
-    }
-
-    int16_sign(
-        x+w/2-80,
-        y+6,
-        160,
-        21,
-        "BUZZ NIGHTCLUB",
-        {20, 12, 35, 255},
-        neon_col,
-        t,
-        20,
-    )
-
-    // Disco ball.
-    disco_x := x+w/2
-    disco_y := y+44
-
-    rl.DrawRectangle(disco_x, y+1, 2, 30, {91, 91, 104, 255})
-    rl.DrawCircle(disco_x+1, disco_y, 14, {53, 56, 70, 255})
-
-    for cell_y: i32 = -8; cell_y <= 8; cell_y += 5 {
-        for cell_x: i32 = -8; cell_x <= 8; cell_x += 5 {
-            if cell_x*cell_x+cell_y*cell_y <= 100 {
-                color_index := (
-                    i32(t*7.0)+
-                    (cell_x+8)/5+
-                    (cell_y+8)/5
-                )%3
-
-                cell_col := cyan
-
-                if color_index == 1 {
-                    cell_col = pink
-                } else if color_index == 2 {
-                    cell_col = {255, 230, 89, 255}
-                }
-
-                rl.DrawRectangle(
-                    disco_x-1+cell_x,
-                    disco_y+cell_y,
-                    4,
-                    4,
-                    cell_col,
-                )
-            }
-        }
-    }
-
-    // Animated ceiling chase lights.
-    chase := i32(t*8.0)%10
-
-    for light: i32 = 0; light < 10; light += 1 {
-        light_x := x+14+light*29
-        active := light == chase || light == (chase+1)%10
-
-        light_col := pink
-        if light%2 == 0 {
-            light_col = cyan
-        }
-
-        int16_light(
-            light_x,
-            y+35,
-            active,
-            light_col,
-            {43, 31, 58, 255},
-        )
-    }
-
-    // Sweeping laser spotlights.
-    beam_a := i32(math.sin(t*1.6)*105.0)
-    beam_b := i32(math.sin(t*1.3+2.0)*105.0)
-
-    for beam_line: i32 = 0; beam_line < 5; beam_line += 1 {
-        offset := beam_line-2
-
-        rl.DrawLine(
-            x+35+offset,
-            y+22,
-            disco_x+beam_a+offset*4,
-            y+126,
-            {255, 46, 170, 38},
-        )
-        rl.DrawLine(
-            x+w-35+offset,
-            y+22,
-            disco_x+beam_b+offset*4,
-            y+126,
-            {38, 212, 255, 38},
-        )
-    }
-
-    // Illuminated bottle shelves.
-    rl.DrawRectangle(x+8, y+65, 72, 57, {29, 18, 39, 255})
-    rl.DrawRectangle(x+11, y+68, 66, 51, {55, 34, 63, 255})
-
-    for shelf: i32 = 0; shelf < 2; shelf += 1 {
-        shelf_y := y+85+shelf*25
-        rl.DrawRectangle(x+13, shelf_y, 62, 3, {138, 95, 54, 255})
-
-        for bottle: i32 = 0; bottle < 5; bottle += 1 {
-            bottle_x := x+16+bottle*12
-            bottle_col := pink
-
-            switch bottle {
-            case 0:
-                bottle_col = {255, 75, 68, 255}
-            case 1:
-                bottle_col = {53, 184, 255, 255}
-            case 2:
-                bottle_col = {72, 227, 104, 255}
-            case 3:
-                bottle_col = {255, 200, 48, 255}
-            case 4:
-                bottle_col = {196, 68, 255, 255}
-            }
-
-            rl.DrawRectangle(bottle_x, shelf_y-15, 8, 15, bottle_col)
-            rl.DrawRectangle(
-                bottle_x+2,
-                shelf_y-19,
-                4,
-                5,
-                {82, 62, 49, 255},
-            )
-
-            glint := i32(
-                math.mod(
-                    t*15.0+f32(bottle*4+shelf*5),
-                    12.0,
-                ),
-            )
-
-            if glint < 3 {
-                rl.DrawRectangle(
-                    bottle_x+1,
-                    shelf_y-13+glint,
-                    2,
-                    4,
-                    rl.WHITE,
-                )
-            }
-        }
-    }
-
-    // Animated audio equalizer.
-    eq_x := x+w-68
-    eq_y := y+69
-
-    rl.DrawRectangle(eq_x-4, eq_y-4, 63, 52, {8, 8, 17, 255})
-
-    for bar: i32 = 0; bar < 6; bar += 1 {
-        bar_h := 8+i32(
-            28.0*
-            (0.5+0.5*math.sin(t*5.0+f32(bar)*1.3)),
-        )
-
-        bar_col := cyan
-
-        switch bar {
-        case 0:
-            bar_col = pink
-        case 1:
-            bar_col = cyan
-        case 2:
-            bar_col = violet
-        case 3:
-            bar_col = lime
-        case 4:
-            bar_col = {255, 213, 50, 255}
-        case 5:
-            bar_col = {255, 83, 61, 255}
-        }
-
-        for segment_y: i32 = 0;
-            segment_y < bar_h;
-            segment_y += 5
-        {
-            rl.DrawRectangle(
-                eq_x+bar*10,
-                eq_y+43-segment_y,
-                7,
-                3,
-                bar_col,
-            )
-        }
-    }
-
-    // Flashing dance floor.
-    floor_y := y+127
-    dance_phase := i32(t*5.0)
-
-    for row: i32 = 0; row < 3; row += 1 {
-        for col: i32 = 0; col < 10; col += 1 {
-            tile_index := (row+col+dance_phase)%4
-            tile_col := rl.Color{48, 28, 67, 255}
-
-            if tile_index == 0 {
-                tile_col = {237, 48, 168, 255}
-            } else if tile_index == 1 {
-                tile_col = {38, 196, 230, 255}
-            } else if tile_index == 2 {
-                tile_col = {114, 52, 221, 255}
-            }
-
-            rl.DrawRectangle(
-                x+col*30,
-                floor_y+row*13,
-                29,
-                12,
-                tile_col,
-            )
-            rl.DrawRectangle(
-                x+col*30+2,
-                floor_y+row*13+2,
-                25,
-                2,
-                {255, 255, 255, 30},
-            )
-        }
-    }
-
-    draw_retro_text(
-        "DANCE FLOOR",
-        x+w/2-34,
-        y+163,
-        7,
-        {255, 229, 116, 255},
-    )
-}
-
-
-int16_draw_hospital :: proc(x, y, w, h: i32, t: f32) {
-    hospital_blue := rl.Color{77, 147, 180, 255}
-    red_cross     := rl.Color{210, 42, 45, 255}
-
-    // Sterile wall panels.
-    for row: i32 = 0; row < 7; row += 1 {
-        for col: i32 = 0; col < 16; col += 1 {
-            panel_x := x+col*20
-
-            if row%2 != 0 {
-                panel_x -= 10
-            }
-
-            panel_y := y+row*12
-
-            rl.DrawRectangle(
-                panel_x,
-                panel_y,
-                19,
-                11,
-                {190, 215, 220, 255},
-            )
-            rl.DrawRectangle(
-                panel_x,
-                panel_y,
-                19,
-                1,
-                {226, 240, 240, 255},
-            )
-        }
-    }
-
-    // Hospital sign and cross.
-    rl.DrawRectangle(x+w/2-50, y+5, 100, 23, {44, 78, 91, 255})
-    rl.DrawRectangle(x+w/2-46, y+9, 92, 15, {225, 238, 237, 255})
-
-    rl.DrawRectangle(x+w/2-39, y+11, 5, 11, red_cross)
-    rl.DrawRectangle(x+w/2-42, y+14, 11, 5, red_cross)
-
-    draw_retro_text(
-        "HOSPITAL",
-        x+w/2-25,
-        y+13,
-        8,
-        hospital_blue,
-    )
-
-    // Emergency lights.
-    emergency_phase := i32(t*5.0)%2 == 0
-
-    int16_light(
-        x+w/2-60,
-        y+16,
-        emergency_phase,
-        {255, 54, 47, 255},
-        {90, 27, 25, 255},
-    )
-    int16_light(
-        x+w/2+60,
-        y+16,
-        !emergency_phase,
-        {61, 157, 255, 255},
-        {23, 47, 91, 255},
-    )
-
-    // Hospital beds.
-    int16_hospital_bed(
-        x+12,
-        y+70,
-        {128, 193, 211, 255},
-    )
-    int16_hospital_bed(
-        x+91,
-        y+70,
-        {125, 188, 162, 255},
-    )
-
-    // Privacy curtain.
-    curtain_sway := i32(math.sin(t*1.1)*2.0)
-
-    rl.DrawRectangle(x+78, y+35, 2, 72, {92, 102, 107, 255})
-    rl.DrawRectangle(
-        x+75+curtain_sway,
-        y+39,
-        7,
-        62,
-        {126, 183, 191, 210},
-    )
-
-    for fold_y: i32 = y+43; fold_y < y+98; fold_y += 8 {
-        rl.DrawRectangle(
-            x+76+curtain_sway,
-            fold_y,
-            5,
-            2,
-            {164, 211, 214, 220},
-        )
-    }
-
-    // Heart monitor.
-    int16_medical_monitor(x+174, y+39, t, 0)
-
-    // IV stand and animated drip.
-    iv_x := x+271
-    iv_y := y+46
-
-    rl.DrawRectangle(iv_x, iv_y, 2, 64, {118, 131, 136, 255})
-    rl.DrawRectangle(iv_x-10, iv_y, 22, 2, {118, 131, 136, 255})
-    rl.DrawLine(iv_x-8, iv_y+1, iv_x-8, iv_y+8, {118, 131, 136, 255})
-
-    rl.DrawRectangle(iv_x-15, iv_y+8, 14, 22, {79, 106, 111, 255})
-    rl.DrawRectangle(iv_x-13, iv_y+10, 10, 18, {194, 230, 237, 210})
-    rl.DrawRectangle(iv_x-12, iv_y+21, 8, 6, {112, 190, 220, 180})
-
-    drip_phase := math.mod(t*18.0, 30.0)
-
-    if drip_phase < 22.0 {
-        rl.DrawRectangle(
-            iv_x-9,
-            iv_y+31+i32(drip_phase),
-            2,
-            3,
-            {122, 206, 236, 230},
-        )
-    }
-
-    // Medicine cabinets.
-    for cabinet: i32 = 0; cabinet < 3; cabinet += 1 {
-        cabinet_x := x+176+cabinet*34
-        cabinet_y := y+84
-
-        rl.DrawRectangle(
-            cabinet_x,
-            cabinet_y,
-            28,
-            37,
-            {99, 125, 135, 255},
-        )
-        rl.DrawRectangle(
-            cabinet_x+2,
-            cabinet_y+2,
-            24,
-            14,
-            {226, 238, 237, 255},
-        )
-        rl.DrawRectangle(
-            cabinet_x+2,
-            cabinet_y+19,
-            24,
-            14,
-            {226, 238, 237, 255},
-        )
-
-        rl.DrawRectangle(cabinet_x+13, cabinet_y+7, 3, 5, red_cross)
-        rl.DrawRectangle(cabinet_x+12, cabinet_y+8, 5, 3, red_cross)
-    }
-
-    // Rolling instrument cart.
-    cart_x := x+19
-    cart_y := y+122
-
-    rl.DrawRectangle(cart_x, cart_y, 53, 6, {152, 166, 170, 255})
-    rl.DrawRectangle(cart_x+4, cart_y+6, 3, 20, {102, 115, 120, 255})
-    rl.DrawRectangle(cart_x+46, cart_y+6, 3, 20, {102, 115, 120, 255})
-    rl.DrawCircle(cart_x+5, cart_y+27, 3, {31, 34, 37, 255})
-    rl.DrawCircle(cart_x+48, cart_y+27, 3, {31, 34, 37, 255})
-
-    rl.DrawRectangle(cart_x+7, cart_y-4, 17, 4, {91, 104, 108, 255})
-    rl.DrawRectangle(cart_x+29, cart_y-6, 3, 6, {199, 206, 207, 255})
-    rl.DrawRectangle(cart_x+36, cart_y-5, 10, 5, {74, 114, 135, 255})
-
-    draw_retro_text(
-        "Emergency treatment and bee sting care",
-        x+15,
-        y+158,
-        7,
-        {230, 247, 244, 255},
-    )
-}
-
-
-int16_draw_bank :: proc(x, y, w, h: i32, t: f32) {
-    steel      := rl.Color{91, 100, 102, 255}
-    steel_dark := rl.Color{42, 48, 49, 255}
-    gold       := rl.Color{242, 190, 39, 255}
-    laser_red  := rl.Color{255, 43, 46, 255}
-    laser_dim  := rl.Color{88, 27, 29, 255}
-
-    // Steel wall panels.
-    for panel_y: i32 = y+4; panel_y < y+95; panel_y += 19 {
-        for panel_x: i32 = x+4; panel_x < x+w-4; panel_x += 38 {
-            rl.DrawRectangle(panel_x, panel_y, 36, 17, {69, 78, 78, 255})
-            rl.DrawRectangle(panel_x+2, panel_y+2, 32, 2, {101, 111, 110, 255})
-            rl.DrawRectangle(panel_x+3, panel_y+14, 3, 2, steel_dark)
-            rl.DrawRectangle(panel_x+30, panel_y+14, 3, 2, steel_dark)
-        }
-    }
-
-    int16_sign(
-        x+w/2-68,
-        y+5,
-        136,
-        20,
-        "FIRST HONEY BANK",
-        {108, 89, 45, 255},
-        gold,
-        t,
-        30,
-    )
-
-    camera_step := i32(t*2.0)%2 == 0
-
-    int16_security_camera(x+8, y+12, true, camera_step)
-    int16_security_camera(x+w-9, y+12, false, !camera_step)
-
-    int16_light(
-        x+43,
-        y+18,
-        camera_step,
-        laser_red,
-        laser_dim,
-    )
-    int16_light(
-        x+w-43,
-        y+18,
-        !camera_step,
-        laser_red,
-        laser_dim,
-    )
-
-    // Vault door.
-    vault_x := x+13
-    vault_y := y+38
-
-    rl.DrawRectangle(vault_x-4, vault_y-4, 78, 92, {30, 34, 35, 255})
-    rl.DrawRectangle(vault_x, vault_y, 70, 84, steel)
-    rl.DrawRectangle(vault_x+5, vault_y+5, 60, 74, {112, 121, 121, 255})
-
-    rl.DrawCircle(vault_x+35, vault_y+41, 24, steel_dark)
-    rl.DrawCircle(vault_x+35, vault_y+41, 20, {127, 137, 136, 255})
-    rl.DrawCircle(vault_x+35, vault_y+41, 5, steel_dark)
-
-    // Slowly rotating vault wheel.
-    vault_angle := t*0.6
-
-    for spoke: i32 = 0; spoke < 4; spoke += 1 {
-        angle := vault_angle+f32(spoke)*(math.PI/2.0)
-        end_x := vault_x+35+i32(math.cos(angle)*16.0)
-        end_y := vault_y+41+i32(math.sin(angle)*16.0)
-
-        rl.DrawLine(
-            vault_x+35,
-            vault_y+41,
-            end_x,
-            end_y,
-            {44, 50, 51, 255},
-        )
-        rl.DrawCircle(end_x, end_y, 3, {52, 59, 60, 255})
-    }
-
-    // Animated security lasers.
-    laser_left := x+98
-    laser_right := x+w-14
-    laser_phase := i32(t*7.0)
-
-    for laser: i32 = 0; laser < 5; laser += 1 {
-        laser_y := y+39+laser*17
-        active := (laser+laser_phase)%3 != 0
-
-        laser_col := laser_dim
-        if active {
-            laser_col = laser_red
-        }
-
-        rl.DrawRectangle(laser_left-5, laser_y-3, 7, 7, steel_dark)
-        rl.DrawRectangle(laser_right-1, laser_y-3, 7, 7, steel_dark)
-        rl.DrawRectangle(laser_left-2, laser_y-1, 3, 3, laser_col)
-        rl.DrawRectangle(laser_right, laser_y-1, 3, 3, laser_col)
-
-        if active {
-            scan_offset := i32(
-                math.sin(t*1.8+f32(laser)*0.9)*5.0,
-            )
-
-            rl.DrawLine(
-                laser_left,
-                laser_y,
-                laser_right,
-                laser_y+scan_offset,
-                {255, 38, 43, 190},
-            )
-            rl.DrawLine(
-                laser_left,
-                laser_y+1,
-                laser_right,
-                laser_y+scan_offset+1,
-                {255, 108, 105, 75},
-            )
-        }
-    }
-
-    // Secured gold and cash platform.
-    display_x := x+110
-    display_y := y+112
-
-    rl.DrawRectangle(display_x-6, display_y-20, w-116, 48, {37, 40, 39, 255})
-    rl.DrawRectangle(display_x-3, display_y-17, w-122, 42, {84, 76, 55, 255})
-
-    sparkle_a := i32(t*5.0)%2 == 0
-    sparkle_b := i32(t*5.0+1.0)%2 == 0
-
-    int16_gold_stack(display_x, display_y, sparkle_a)
-    int16_gold_stack(display_x+51, display_y+4, sparkle_b)
-    int16_money_stack(display_x+104, display_y+7, sparkle_a)
-    int16_money_stack(display_x+139, display_y+3, sparkle_b)
-
-    // Cute indoor plants.
-    int16_plant(x+99, y+154, t, 0.0)
-    int16_plant(x+w-15, y+154, t, 1.8)
-    int16_plant(x+91, y+94, t, 3.1)
-
-    // Alarm floor lights.
-    for alarm: i32 = 0; alarm < 6; alarm += 1 {
-        alarm_x := x+104+alarm*30
-        alarm_on := (alarm+i32(t*6.0))%6 == 0
-
-        int16_light(
-            alarm_x,
-            y+153,
-            alarm_on,
-            laser_red,
-            laser_dim,
-        )
-    }
-
-    draw_retro_text(
-        "SECURITY SYSTEM: ACTIVE",
-        x+107,
-        y+164,
-        8,
-        laser_red,
-    )
-}
-
-int16_draw_sheriff :: proc(x, y, w, h: i32, t: f32) {
-    red_on := i32(t*5.0)%2 == 0
-
-    // Desk.
-    rl.DrawRectangle(x+18, y+54, 87, 42, {85, 57, 39, 255})
-    rl.DrawRectangle(x+15, y+50, 93, 8, {145, 91, 52, 255})
-
-    // Filing cabinets.
-    for cabinet: i32 = 0; cabinet < 3; cabinet += 1 {
-        cx := x+w-87+cabinet*24
-
-        rl.DrawRectangle(cx, y+48, 20, 53, {74, 82, 91, 255})
-
-        for drawer: i32 = 0; drawer < 4; drawer += 1 {
-            dy := y+52+drawer*12
-            rl.DrawRectangle(cx+2, dy, 16, 9, {104, 114, 124, 255})
-            rl.DrawRectangle(cx+7, dy+2, 6, 2, {39, 43, 48, 255})
-        }
-    }
-
-    // Police lights.
-    int16_light(
-        x+w/2-10,
-        y+18,
-        red_on,
-        {255, 44, 43, 255},
-        {82, 24, 25, 255},
-    )
-    int16_light(
-        x+w/2+10,
-        y+18,
-        !red_on,
-        {47, 111, 255, 255},
-        {24, 38, 91, 255},
-    )
-
-    // Jail bars.
-    rl.DrawRectangle(x+w-70, y+108, 58, 4, {34, 37, 42, 255})
-
-    for bar: i32 = 0; bar < 7; bar += 1 {
-        rl.DrawRectangle(x+w-67+bar*8, y+108, 3, 45, {48, 52, 58, 255})
-    }
-
-    int16_sign(
-        x+w/2-65,
-        y+5,
-        130,
-        20,
-        "HONEYVILLE POLICE",
-        {42, 66, 120, 255},
-        rl.WHITE,
-        t,
-        5,
-    )
-
-    draw_retro_text(
-        "Protecting every bee in town",
-        x+17,
-        y+142,
-        7,
-        {220, 229, 245, 255},
-    )
-}
-
-
-int16_draw_dealership :: proc(x, y, w, h: i32, t: f32) {
-    // Large glass wall.
-    rl.DrawRectangle(x+5, y+5, w-10, 31, {111, 181, 218, 170})
-
-    for divider: i32 = 0; divider < 7; divider += 1 {
-        rl.DrawRectangle(x+5+divider*48, y+5, 3, 31, {202, 215, 223, 255})
-    }
-
-    shine_x := x+5+i32(math.mod(t*60.0, f32(w-10)))
-    rl.DrawRectangle(shine_x, y+5, 10, 31, {255, 255, 255, 55})
-
-    int16_sign(
-        x+w/2-93,
-        y+9,
-        186,
-        18,
-        "HONEYVILLE MOTORS",
-        {30, 96, 184, 255},
-        rl.WHITE,
-        t,
-        12,
-    )
-
-    // Three compact display cars.
-    for car: i32 = 0; car < 3; car += 1 {
-        car_x := x+21+car*97
-        car_y := y+81
-        car_col := rl.Color{222, 48, 45, 255}
-
-        if car == 1 {
-            car_col = {44, 94, 211, 255}
-        } else if car == 2 {
-            car_col = {243, 196, 31, 255}
-        }
-
-        rl.DrawRectangle(car_x, car_y-18, 63, 22, {22, 25, 29, 255})
-        rl.DrawRectangle(car_x+2, car_y-16, 59, 18, car_col)
-        rl.DrawRectangle(car_x+13, car_y-29, 37, 13, car_col)
-        rl.DrawRectangle(car_x+17, car_y-27, 13, 10, {133, 190, 218, 255})
-        rl.DrawRectangle(car_x+33, car_y-27, 13, 10, {133, 190, 218, 255})
-
-        rl.DrawCircle(car_x+14, car_y+3, 9, {22, 24, 28, 255})
-        rl.DrawCircle(car_x+14, car_y+3, 4, {174, 183, 188, 255})
-        rl.DrawCircle(car_x+51, car_y+3, 9, {22, 24, 28, 255})
-        rl.DrawCircle(car_x+51, car_y+3, 4, {174, 183, 188, 255})
-
-        spotlight := (i32(t*4.0)+car)%3 == 0
-
-        int16_light(
-            car_x+31,
-            y+48,
-            spotlight,
-            {255, 243, 175, 255},
-            {88, 82, 54, 255},
-        )
-    }
-
-    draw_retro_text(
-        "Press [O] to browse cars",
-        x+w/2-78,
-        y+127,
-        8,
-        {255, 220, 79, 255},
-    )
-}
-
-
-int16_draw_sanctuary :: proc(x, y, w, h: i32, t: f32) {
-    fx := f32(x); fy := f32(y); fw := f32(w); fh := f32(h)
-
-    // Greenhouse glass tint.
-    rl.DrawRectangle(x+4, y+4, w-8, h-8, {140, 200, 160, 60})
-
-    for gi in 0..<8 {
-        gx := x + 4 + i32(gi)*(w-8)/8
-        rl.DrawRectangle(gx, y+4, 2, h-8, {200, 230, 210, 90})
-    }
-
-    // Sunbeams drifting through the glass.
-    for rayi in 0..<3 {
-        rx_off := i32(math.sin(t*0.2 + f32(rayi)*2.0)*20)
-        ray_x := x + 40 + i32(rayi)*90 + rx_off
-        rl.DrawTriangle(
-            {f32(ray_x), f32(y+4)},
-            {f32(ray_x-24), f32(y+h-8)},
-            {f32(ray_x+24), f32(y+h-8)},
-            {255, 255, 220, 18})
-    }
-
-    // Animated greenhouse plants (2x6 grid).
-    plant_pos: [12][2]i32
-    for row: i32 = 0; row < 2; row += 1 {
-        for col: i32 = 0; col < 6; col += 1 {
-            plant_x := x+35+col*88
-	    plant_y := y+115+row*125
-
-            int16_plant(
-		plant_x,
-		plant_y,
-		t,
-		f32(row*6+col)*0.7,
-	    )
-
-	    plant_pos[row*6+col] = {plant_x, plant_y}
-        }
-    }
-
-
-    // Floating pollen motes rising from the plants.
-    for poi in 0..<10 {
-        pseed := u32(poi)
-        src := plant_pos[poi % len(plant_pos)]
-        rise := math.mod(t*10.0 + mp_night_hash01(pseed*7+2)*40.0, 40.0)
-        pxx := src[0]+8 + i32(math.sin(t*0.8+f32(poi))*6)
-        pyy := src[1] - i32(rise)
-        rl.DrawCircle(pxx, pyy, 1, {255, 250, 200, u8(160.0*(1.0-rise/40.0))})
-    }
-
-    draw_retro_text("BEE SANCTUARY GREENHOUSE", x+20, y+80, 9, COL_SANCTUARY)
-    draw_retro_text("Press [O] to open the Donation menu", x+20, y+94, 8, COL_TEXT)
-
-    donated_str := fmt.aprintf("Total Donated: $%.2f", g.sanctuary_donated, allocator = context.temp_allocator)
-    draw_retro_text(donated_str, x+20, y+108, 8, COL_HONEY)
-
-    // Bees orbiting the greenhouse interior.
-    for bi in 0..<g.sanctuary_bee_count {
-        speed := get_sanctuary_bee_speed(bi)
-        bangle := t*1.6*speed + f32(bi)*0.87
-        bx := i32(fx + fw/2 + math.cos(bangle+f32(bi)*1.3)*(fw/2-24))
-        by := i32(fy + fh/2 + math.sin(bangle*0.8+f32(bi)*1.7)*(fh/2-24))
-        rl.DrawRectangle(bx-2, by-1, 4, 3, {220, 200, 0, 220})
-        rl.DrawRectangle(bx-1, by-1, 2, 3, {40, 40, 40, 200})
-        rl.DrawRectangle(bx-3, by-2, 2, 2, {200, 230, 255, 140})
-        rl.DrawRectangle(bx+1, by-2, 2, 2, {200, 230, 255, 140})
-    }
-}
-
-
-int16_draw_factory :: proc(x, y, w, h: i32, t: f32) {
-    amber := rl.Color{255, 185, 41, 255}
-
-    int16_sign(
-        x+w/2-105,
-        y+7,
-        210,
-        20,
-        "FUZZY BUDDY FACTORY",
-        {109, 77, 37, 255},
-        rl.WHITE,
-        t,
-        25,
-    )
-
-    // Animated conveyor.
-    belt_y := y+55
-
-    rl.DrawRectangle(x+15, belt_y, w-30, 22, {34, 36, 39, 255})
-    rl.DrawRectangle(x+15, belt_y, w-30, 4, {85, 89, 94, 255})
-
-    conveyor_scroll := i32(math.mod(t*35.0, 20.0))
-
-    for roller_x: i32 = x+18-conveyor_scroll;
-        roller_x < x+w-18;
-        roller_x += 20
-    {
-        rl.DrawRectangle(roller_x, belt_y+6, 5, 12, {18, 19, 22, 255})
-    }
-
-    // Honey jars moving on conveyor.
-    for jar: i32 = 0; jar < 7; jar += 1 {
-        jar_x := x+20+i32(
-            math.mod(
-                t*31.0+f32(jar)*72.0,
-                f32(w-45),
-            ),
-        )
-
-        rl.DrawRectangle(jar_x, belt_y-14, 13, 15, {102, 69, 28, 255})
-        rl.DrawRectangle(jar_x+1, belt_y-13, 11, 13, amber)
-        rl.DrawRectangle(jar_x+3, belt_y-16, 7, 3, {91, 92, 88, 255})
-        rl.DrawRectangle(jar_x+3, belt_y-9, 7, 4, {255, 226, 108, 255})
-    }
-
-    // Processing tanks.
-    for tank: i32 = 0; tank < 3; tank += 1 {
-        tank_x := x+44+tank*145
-        tank_y := y+122
-
-        rl.DrawRectangle(tank_x, tank_y, 70, 76, {108, 112, 119, 255})
-        rl.DrawRectangle(tank_x+4, tank_y+5, 62, 65, {147, 151, 158, 255})
-        rl.DrawRectangle(tank_x, tank_y, 70, 9, {190, 194, 199, 255})
-
-        honey_bob := i32(math.sin(t*2.0+f32(tank))*3.0)
-
-        rl.DrawRectangle(
-            tank_x+8,
-            tank_y+42+honey_bob,
-            54,
-            18,
-            amber,
-        )
-
-        status_on := (i32(t*4.0)+tank)%3 == 0
-
-        int16_light(
-            tank_x+35,
-            tank_y-7,
-            status_on,
-            {71, 255, 105, 255},
-            {26, 78, 36, 255},
-        )
-    }
-
-    // Steam pixels.
-    for steam: i32 = 0; steam < 9; steam += 1 {
-        steam_x := x+78+(steam%3)*145
-        rise := i32(math.mod(t*13.0+f32(steam)*8.0, 42.0))
-        sway := i32(math.sin(t+f32(steam))*4.0)
-
-        rl.DrawRectangle(
-            steam_x+sway,
-            y+120-rise,
-            4,
-            4,
-            {235, 238, 239, 95},
-        )
-    }
-}
-
-draw_interior :: proc() {
-    bt := g.interior_building
-    rw, rh := interior_room_size(bt)
-
-    rx := -rw/2
-    ry := -rh/2
-
-    ix := pxi(rx)
-    iy := pxi(ry)
-    iw := pxi(rw)
-    ih := pxi(rh)
-
-    t := f32(rl.GetTime())
-
-    floor_first: rl.Color
-    floor_second: rl.Color
-    wall_col: rl.Color
-
-    #partial switch bt {
-    case .Market:
-        floor_first  = {142, 104, 61, 255}
-        floor_second = {119, 84, 48, 255}
-        wall_col     = {67, 111, 61, 255}
-
-    case .SheriffOffice:
-        floor_first  = {106, 111, 128, 255}
-        floor_second = {84, 90, 108, 255}
-        wall_col     = {60, 71, 111, 255}
-
-    case .DoctorOffice:
-        floor_first  = {196, 219, 223, 255}
-        floor_second = {171, 202, 208, 255}
-        wall_col     = {106, 153, 171, 255}
-
-    case .Bank:
-        floor_first  = {116, 106, 88, 255}
-        floor_second = {94, 87, 74, 255}
-        wall_col     = {66, 75, 73, 255}
-
-    case .Diner:
-        floor_first  = {64, 65, 71, 255}
-        floor_second = {47, 49, 55, 255}
-        wall_col     = {155, 51, 43, 255}
-
-    case .Bar:
-        floor_first  = {42, 31, 61, 255}
-        floor_second = {29, 23, 47, 255}
-        wall_col     = {17, 13, 34, 255}
-
-    case .CarDealership:
-        floor_first  = {218, 220, 228, 255}
-        floor_second = {191, 196, 207, 255}
-        wall_col     = {47, 56, 72, 255}
-
-    case .BeeSanctuary:
-        floor_first  = {89, 149, 70, 255}
-        floor_second = {72, 129, 59, 255}
-        wall_col     = {49, 109, 50, 255}
-
-    case .FuzzyBuddyFactory:
-        floor_first  = {94, 90, 96, 255}
-        floor_second = {72, 69, 76, 255}
-        wall_col     = {54, 50, 59, 255}
-    }
-
-    // Room shadow and wall border.
-    rl.DrawRectangle(ix-11, iy-11, iw+22, ih+22, {13, 14, 18, 255})
-    rl.DrawRectangle(ix-8, iy-8, iw+16, ih+16, wall_col)
-
-    // Base floor.
-    int16_floor(
-        ix,
-        iy,
-        iw,
-        ih,
-        floor_first,
-        floor_second,
-    )
-
-    rl.DrawRectangleLinesEx(
-	{f32(ix), f32(iy), f32(iw), f32(ih)},
-	2,
-	{0, 0, 0, 190},
-    )
-
-    #partial switch bt {
-    case .Market:
-        int16_draw_market(ix, iy, iw, ih, t)
-
-    case .Diner:
-        int16_draw_carryout(ix, iy, iw, ih, t)
-
-    case .Bar:
-        int16_draw_nightclub(ix, iy, iw, ih, t)
-
-    case .DoctorOffice:
-        int16_draw_hospital(ix, iy, iw, ih, t)
-
-    case .Bank:
-        int16_draw_bank(ix, iy, iw, ih, t)
-
-    case .SheriffOffice:
-        int16_draw_sheriff(ix, iy, iw, ih, t)
-
-    case .CarDealership:
-        int16_draw_dealership(ix, iy, iw, ih, t)
-
-    case .BeeSanctuary:
-        int16_draw_sanctuary(ix, iy, iw, ih, t)
-
-    case .FuzzyBuddyFactory:
-        int16_draw_factory(ix, iy, iw, ih, t)
-    }
-
-    exit_x: i32 = -12
-    exit_y := iy+ih-28
-
-    rl.DrawRectangle(exit_x, exit_y, 24, 28, {57, 34, 14, 255})
-    rl.DrawRectangle(exit_x+1, exit_y+1, 22, 26, {105, 66, 31, 255})
-    rl.DrawRectangle(exit_x, exit_y, 24, 4, {60, 35, 10, 255})
-    rl.DrawRectangle(exit_x+17, exit_y+13, 3, 3, {238, 194, 70, 255})
-
-    draw_retro_text(
-        "[O] OPTIONS MENU",
-        -14,
-        iy+ih-40,
-        8,
-        COL_HONEY,
-    )
-
-    if g.player.pos.y > 60 {
-        draw_retro_text(
-            "[E] EXIT",
-            -50,
-            iy+ih-52,
-            7,
-            COL_TEXT,
-        )
-    }
-
-    draw_player()
-}
-
 draw_retro_text :: proc(text: string, x, y: i32, size: i32, col: rl.Color) {
     ctext := strings.clone_to_cstring(text, context.temp_allocator)
     rl.DrawText(ctext, x+1, y+1, size, {0,0,0,200})
@@ -11512,6 +9774,408 @@ draw_spinning_wheel :: proc(cx, cy: i32, t: f32) {
         ey := cy + i32(math.sin(a)*4)
         rl.DrawLine(cx, cy, ex, ey, {150,150,150,255})
     }
+}
+
+draw_interior :: proc() {
+    bt := g.interior_building
+    rw, rh := interior_room_size(bt)
+    rx := -rw/2; ry := -rh/2
+    t := f32(rl.GetTime())
+
+    floor_col: rl.Color
+    wall_col:  rl.Color
+    #partial switch bt {
+    case .Market:        floor_col = {180,150,100,255}; wall_col = {140,100,60,255}
+    case .SheriffOffice: floor_col = {160,160,180,255}; wall_col = {80,90,140,255}
+    case .DoctorOffice:  floor_col = {220,230,240,255}; wall_col = {180,210,230,255}
+    case .Bank:          floor_col = {200,185,140,255}; wall_col = {160,140,90,255}
+    case .Diner:         floor_col = {220,180,140,255}; wall_col = {180,80,60,255}
+    case .Bar:           floor_col = {100,70,40,255};   wall_col = {60,35,15,255}
+    case .CarDealership: floor_col = {220,220,228,255}; wall_col = {48,56,72,255}
+    case .BeeSanctuary:  floor_col = {90,150,70,255};   wall_col = {50,110,50,255}
+    case .FuzzyBuddyFactory: floor_col = {95,90,95,255}; wall_col = {55,50,58,255}
+    }
+
+    rl.DrawRectangle(pxi(rx)-8, pxi(ry)-8, pxi(rw)+16, pxi(rh)+16, wall_col)
+    tile :: i32(20)
+    for ty := pxi(ry); ty < pxi(ry+rh); ty += tile {
+        for tx := pxi(rx); tx < pxi(rx+rw); tx += tile {
+            col := floor_col if ((tx/tile)+(ty/tile))%2==0 else rl.Color{floor_col.r-20, floor_col.g-20, floor_col.b-20, 255}
+            rl.DrawRectangle(tx, ty, tile-1, tile-1, col)
+        }
+    }
+    rl.DrawRectangleLinesEx({rx, ry, rw, rh}, 2, {0,0,0,180})
+
+    rl.DrawRectangle(-12, pxi(ry+rh)-28, 24, 28, {80,50,20,255})
+    rl.DrawRectangle(-11, pxi(ry+rh)-27, 22, 26, {100,65,30,255})
+    rl.DrawRectangle(-12, pxi(ry+rh)-28, 24, 4, {60,35,10,255})
+    draw_retro_text("EXIT", -14, pxi(ry+rh)-40, 8, COL_HONEY)
+    if g.player.pos.y > 60 {
+        draw_retro_text("[E] Leave", -50, pxi(ry+rh)-52, 7, COL_TEXT)
+    }
+    draw_retro_text("[O] Options", -50, pxi(ry+rh)-62, 7, COL_TEXT2)
+
+    #partial switch bt {
+    case .Market:
+        for si in 0..<4 {
+            sx := pxi(rx) + 10 + i32(si)*68
+            rl.DrawRectangle(sx, pxi(ry)+10, 56, 8, {120,80,40,255})
+            rl.DrawRectangle(sx, pxi(ry)+30, 56, 8, {120,80,40,255})
+            for ji in 0..<3 {
+                jx := sx + 6 + i32(ji)*16
+                flicker := 0.75 + 0.25*math.sin(t*3.0 + f32(si*3+ji)*1.7)
+                glow_a := u8(40.0*flicker)
+                rl.DrawCircle(jx+5, pxi(ry)+5, 10, rl.Color{255,220,120,glow_a})
+                rl.DrawRectangle(jx, pxi(ry)+2, 10, 8, {240,180,0,255})
+                rl.DrawRectangle(jx+1, pxi(ry)+3, 8, 6, {255,210,40,255})
+                rl.DrawRectangle(jx+3, pxi(ry)+1, 4, 2, {80,60,20,255})
+            }
+        }
+        rl.DrawRectangle(pxi(rx)+10, pxi(ry)+60, pxi(rw)-20, 16, {140,100,50,255})
+        rl.DrawRectangle(pxi(rx)+10, pxi(ry)+60, pxi(rw)-20, 3,  {180,140,80,255})
+
+        reg_on := math.mod(t, 1.2) < 0.6
+        reg_col := rl.Color{80,255,80,255} if reg_on else rl.Color{20,80,20,255}
+        rl.DrawRectangle(pxi(rx)+pxi(rw)-40, pxi(ry)+52, 14, 10, {40,40,40,255})
+        rl.DrawCircle(pxi(rx)+pxi(rw)-33, pxi(ry)+55, 2, reg_col)
+
+        swing := math.sin(t*1.5) * 6
+        rl.DrawRectangle(pxi(rx)+pxi(rw)/2-18+i32(swing), pxi(ry)+2, 36, 10, {200,40,40,255})
+        draw_retro_text("OPEN", pxi(rx)+pxi(rw)/2-14+i32(swing), pxi(ry)+3, 8, rl.WHITE)
+
+        for di in 0..<6 {
+            dseed := u32(di)
+            dx := pxi(rx) + 20 + i32(math.mod(t*8.0 + mp_night_hash01(dseed*11+3)*300.0, f32(pxi(rw)-40)))
+            dy := pxi(ry) + 70 + i32(math.sin(t*0.7 + f32(di))*10)
+            rl.DrawCircle(dx, dy, 1, {255,240,200,90})
+        }
+        draw_retro_text("Welcome to the Market!", pxi(rx)+20, pxi(ry)+80, 9, COL_HONEY)
+        draw_retro_text("Buy hives and sell your honey here.", pxi(rx)+20, pxi(ry)+94, 8, COL_TEXT)
+        draw_retro_text("Watch out for Dale...", pxi(rx)+20, pxi(ry)+110, 8, COL_TEXT2)
+
+    case .CarDealership:
+        rl.DrawRectangle(pxi(rx)+4, pxi(ry)+4, pxi(rw)-8, 28, {160,210,240,160})
+        for ci in 0..<6 {
+            rl.DrawRectangle(pxi(rx)+4+i32(ci)*48, pxi(ry)+4, 3, 28, {200,210,220,255})
+        }
+        shine_x := pxi(rx)+4 + i32(math.mod(t*60.0, f32(pxi(rw)-8)))
+        rl.DrawRectangle(shine_x, pxi(ry)+4, 10, 28, {255,255,255,50})
+
+        neon_phase := math.mod(t*0.6, 3.0)
+        neon_col := rl.Color{20,160,255,255}
+        if neon_phase < 1.0 { neon_col = {20,160,255,255} } else if neon_phase < 2.0 { neon_col = {255,60,160,255} } else { neon_col = {60,255,160,255} }
+        rl.DrawRectangle(pxi(rx)+20, pxi(ry)+8, pxi(rw)-40, 14, neon_col)
+        draw_retro_text("HONEYVILLE MOTORS - SHOWROOM", pxi(rx)+28, pxi(ry)+11, 7, rl.WHITE)
+
+        beam_angle := t*0.8
+        bx0 := pxi(rx)+pxi(rw)/2
+        bx1 := bx0 + i32(math.sin(beam_angle)*100)
+        by1 := pxi(ry)+95
+        rl.DrawTriangle({f32(bx0-4), f32(pxi(ry)+4)}, {f32(bx1-30), f32(by1)}, {f32(bx1+30), f32(by1)}, {255,255,200,25})
+
+        rl.DrawRectangle(pxi(rx)+20,  pxi(ry)+60, 48, 20, {220,40,40,255})
+        rl.DrawRectangle(pxi(rx)+28,  pxi(ry)+46, 32, 14, {220,40,40,255})
+        rl.DrawRectangle(pxi(rx)+30,  pxi(ry)+48, 12, 12, {140,190,220,200})
+        rl.DrawRectangle(pxi(rx)+44,  pxi(ry)+48, 10, 12, {140,190,220,200})
+        draw_spinning_wheel(pxi(rx)+27, pxi(ry)+81, t)
+        draw_spinning_wheel(pxi(rx)+59, pxi(ry)+81, t)
+        draw_retro_text("Pollen 911 BT3RS $45k", pxi(rx)+16, pxi(ry)+88, 7, COL_TEXT)
+
+        rl.DrawRectangle(pxi(rx)+120, pxi(ry)+60, 48, 20, {40,80,200,255})
+        rl.DrawRectangle(pxi(rx)+128, pxi(ry)+46, 32, 14, {40,80,200,255})
+        rl.DrawRectangle(pxi(rx)+130, pxi(ry)+48, 12, 12, {140,190,220,200})
+        rl.DrawRectangle(pxi(rx)+144, pxi(ry)+48, 10, 12, {140,190,220,200})
+        draw_spinning_wheel(pxi(rx)+127, pxi(ry)+81, t)
+        draw_spinning_wheel(pxi(rx)+159, pxi(ry)+81, t)
+        draw_retro_text("Buzz B-150 $38k", pxi(rx)+116, pxi(ry)+88, 7, COL_TEXT)
+
+        rl.DrawRectangle(pxi(rx)+220, pxi(ry)+60, 48, 20, {240,200,20,255})
+        rl.DrawRectangle(pxi(rx)+228, pxi(ry)+46, 32, 14, {240,200,20,255})
+        rl.DrawRectangle(pxi(rx)+230, pxi(ry)+48, 12, 12, {140,190,220,200})
+        rl.DrawRectangle(pxi(rx)+244, pxi(ry)+48, 10, 12, {140,190,220,200})
+        draw_spinning_wheel(pxi(rx)+227, pxi(ry)+81, t)
+        draw_spinning_wheel(pxi(rx)+259, pxi(ry)+81, t)
+        draw_retro_text("Rari B40 LM $62k", pxi(rx)+216, pxi(ry)+88, 7, COL_TEXT)
+
+        draw_retro_text("Press [o] to browse cars", pxi(rx)+80, pxi(ry)+110, 8, COL_HONEY)
+
+    case .SheriffOffice:
+        rl.DrawRectangle(pxi(rx)+20, pxi(ry)+40, 80, 40, {100,80,60,255})
+        rl.DrawRectangle(pxi(rx)+20, pxi(ry)+40, 80, 4,  {130,100,70,255})
+
+        siren_on_red := math.mod(t*2.0, 1.0) < 0.5
+        siren_col := rl.Color{255,30,30,220} if siren_on_red else rl.Color{30,60,255,220}
+        rl.DrawCircle(pxi(rx)+140, pxi(ry)+16, 10, siren_col)
+        rl.DrawCircle(pxi(rx)+140, pxi(ry)+16, 4, rl.WHITE)
+
+        for bi in 0..<6 {
+            bx := pxi(rx)+pxi(rw)-70 + i32(bi)*8
+            rl.DrawRectangle(bx, pxi(ry)+10, 3, 50, {40,40,44,255})
+        }
+        rl.DrawRectangle(pxi(rx)+pxi(rw)-74, pxi(ry)+58, 54, 4, {40,40,44,255})
+
+        lamp_swing := math.sin(t*1.2)*8
+        lamp_x := pxi(rx)+30 + i32(lamp_swing)
+        rl.DrawTriangle({f32(lamp_x), f32(pxi(ry)+40)}, {f32(lamp_x-14), f32(pxi(ry)+70)}, {f32(lamp_x+14), f32(pxi(ry)+70)}, {255,240,180,35})
+
+        draw_retro_text("POLICE MF STATION", pxi(rx)+20, pxi(ry)+90, 9, COL_SHERIFF)
+        draw_retro_text("Security Monitors", pxi(rx)+20, pxi(ry)+104, 8, COL_TEXT2)
+        draw_police_tv_screens(rx, ry)
+        draw_retro_text("[E] to exit", pxi(rx)+20, pxi(ry)+120, 8, COL_TEXT2)
+
+    case .BeeSanctuary:
+        rl.DrawRectangle(pxi(rx)+4, pxi(ry)+4, pxi(rw)-8, pxi(rh)-8, {140,200,160,60})
+        for gi in 0..<8 {
+            gx := pxi(rx) + 4 + i32(gi)*(pxi(rw)-8)/8
+            rl.DrawRectangle(gx, pxi(ry)+4, 2, pxi(rh)-8, {200,230,210,90})
+        }
+        for rayi in 0..<3 {
+            rx_off := i32(math.sin(t*0.2 + f32(rayi)*2.0)*20)
+            ray_x := pxi(rx) + 40 + i32(rayi)*90 + rx_off
+            rl.DrawTriangle(
+                {f32(ray_x), f32(pxi(ry)+4)},
+                {f32(ray_x-24), f32(pxi(ry)+pxi(rh)-8)},
+                {f32(ray_x+24), f32(pxi(ry)+pxi(rh)-8)},
+                {255,255,220,18})
+        }
+        plant_pos := [6][2]i32{
+            {pxi(rx)+16, pxi(ry)+16},              {pxi(rx)+pxi(rw)-32, pxi(ry)+16},
+            {pxi(rx)+16, pxi(ry)+pxi(rh)-40},       {pxi(rx)+pxi(rw)-32, pxi(ry)+pxi(rh)-40},
+            {pxi(rx)+pxi(rw)/2-8, pxi(ry)+16},      {pxi(rx)+pxi(rw)/2-8, pxi(ry)+pxi(rh)-40},
+        }
+        for pp in plant_pos {
+            rl.DrawRectangle(pp[0], pp[1]+18, 16, 12, {140,90,50,255})
+            rl.DrawCircle(pp[0]+8, pp[1]+10, 12, COL_TREE_LEAF)
+            rl.DrawCircle(pp[0]+8, pp[1]+2,   8, COL_TREE_LEAF2)
+        }
+        for poi in 0..<10 {
+            pseed := u32(poi)
+            src := plant_pos[poi % len(plant_pos)]
+            rise := math.mod(t*10.0 + mp_night_hash01(pseed*7+2)*40.0, 40.0)
+            pxx := src[0]+8 + i32(math.sin(t*0.8+f32(poi))*6)
+            pyy := src[1] - i32(rise)
+            rl.DrawCircle(pxx, pyy, 1, {255,250,200,u8(160.0*(1.0-rise/40.0))})
+        }
+        draw_retro_text("BEE SANCTUARY GREENHOUSE", pxi(rx)+20, pxi(ry)+80, 9, COL_SANCTUARY)
+        draw_retro_text("Press [O] to open the Donation menu", pxi(rx)+20, pxi(ry)+94, 8, COL_TEXT)
+        donated_str := fmt.aprintf("Total Donated: $%.2f", g.sanctuary_donated, allocator = context.temp_allocator)
+        draw_retro_text(donated_str, pxi(rx)+20, pxi(ry)+108, 8, COL_HONEY)
+
+        for bi in 0..<g.sanctuary_bee_count {
+            speed := get_sanctuary_bee_speed(bi)
+            bangle := t*1.6*speed + f32(bi)*0.87
+            bx := i32(rx + rw/2 + math.cos(bangle+f32(bi)*1.3)*(rw/2-24))
+            by := i32(ry + rh/2 + math.sin(bangle*0.8+f32(bi)*1.7)*(rh/2-24))
+            rl.DrawRectangle(bx-2, by-1, 4, 3, {220,200,0,220})
+            rl.DrawRectangle(bx-1, by-1, 2, 3, {40,40,40,200})
+            rl.DrawRectangle(bx-3, by-2, 2, 2, {200,230,255,140})
+            rl.DrawRectangle(bx+1, by-2, 2, 2, {200,230,255,140})
+        }
+
+    case .FuzzyBuddyFactory:
+        for pi in 0..<3 {
+            bx := pxi(rx) + 20 + i32(pi)*90
+            rl.DrawRectangle(bx, pxi(ry)+4, 8, pxi(rh)-8, {70,65,70,255})
+            rl.DrawRectangle(bx+1, pxi(ry)+4, 2, pxi(rh)-8, {110,105,110,255})
+        }
+        rl.DrawRectangle(pxi(rx)+10, pxi(ry)+14, pxi(rw)-20, 18, {40,40,44,255})
+        rl.DrawRectangle(pxi(rx)+10, pxi(ry)+14, pxi(rw)-20, 4, {80,80,88,255})
+        belt_w := pxi(rw)-28
+        scroll := i32(math.mod(t*40.0, 20.0))
+        for ci in 0..<10 {
+            cx := pxi(rx) + 14 + i32(ci)*(belt_w/10) - scroll
+            rl.DrawRectangle(cx, pxi(ry)+16, 3, 14, {20,20,22,255})
+        }
+        for ji in 0..<4 {
+            jx := pxi(rx) + 10 + i32(math.mod(t*30.0 + f32(ji)*60.0, f32(belt_w)))
+            rl.DrawRectangle(jx, pxi(ry)+6, 10, 10, {240,180,0,255})
+            rl.DrawRectangle(jx+1, pxi(ry)+7, 8, 8, {255,210,40,255})
+        }
+        vat_positions := [2][2]i32{
+            {pxi(rx)+20, pxi(ry)+60}, {pxi(rx)+pxi(rw)-70, pxi(ry)+60},
+        }
+        for vi in 0..<len(vat_positions) {
+            vp := vat_positions[vi]
+            rl.DrawRectangle(vp[0], vp[1], 50, 46, {130,130,138,255})
+            rl.DrawRectangle(vp[0], vp[1], 50, 8, {170,170,180,255})
+            rl.DrawRectangleLinesEx({f32(vp[0]), f32(vp[1]), 50, 46}, 1, {60,60,66,255})
+            bob := i32(math.sin(t*2.0+f32(vi)*2.0)*2)
+            rl.DrawRectangle(vp[0]+6, vp[1]+16+bob, 38, 10, COL_HONEY2)
+            status_on := math.mod(t*1.5+f32(vi)*0.7, 2.0) < 1.0
+            status_col := rl.Color{60,220,60,255} if status_on else rl.Color{220,60,60,255}
+            rl.DrawCircle(vp[0]+25, vp[1]-4, 4, status_col)
+        }
+        rl.DrawRectangle(pxi(rx)+pxi(rw)/2-14, pxi(ry)+pxi(rh)-60, 28, 24, {150,110,60,255})
+        rl.DrawRectangleLinesEx({f32(pxi(rx)+pxi(rw)/2-14), f32(pxi(ry)+pxi(rh)-60), 28, 24}, 1, {90,60,30,255})
+        for si in 0..<3 {
+            sa := f32(si)*0.9 + t*0.5
+            sx := pxi(rx)+pxi(rw)/2 + i32(math.sin(sa)*4)
+            sy := pxi(ry)+50 - i32(si)*10
+            rl.DrawCircle(sx, sy, f32(5-si), {230,230,230,u8(90-si*20)})
+        }
+        draw_retro_text("FUZZY BUDDY FACTORY", pxi(rx)+20, pxi(ry)+pxi(rh)-90, 9, COL_FACTORY)
+        draw_retro_text("Convert raw honey into premium honey products!", pxi(rx)+20, pxi(ry)+pxi(rh)-76, 8, COL_TEXT)
+        draw_retro_text("Press [O] to open factory operations", pxi(rx)+20, pxi(ry)+pxi(rh)-62, 8, COL_TEXT2)
+
+    case .DoctorOffice:
+        rl.DrawRectangle(pxi(rx)+20, pxi(ry)+30, 100, 30, {200,220,240,255})
+        rl.DrawRectangle(pxi(rx)+20, pxi(ry)+30, 100, 4,  {160,190,220,255})
+        rl.DrawRectangle(pxi(rx)+140, pxi(ry)+10, 50, 70, {180,200,220,255})
+        rl.DrawRectangleLinesEx({f32(pxi(rx)+140), f32(pxi(ry)+10), 50, 70}, 1, {120,160,200,255})
+        rl.DrawRectangle(pxi(rx)+158, pxi(ry)+20, 14, 40, {200,40,40,255})
+        rl.DrawRectangle(pxi(rx)+148, pxi(ry)+33, 34, 14, {200,40,40,255})
+
+        mon_x := pxi(rx)+20; mon_y := pxi(ry)+6
+        rl.DrawRectangle(mon_x, mon_y, 70, 20, {10,20,15,255})
+        prev_hx, prev_hy: i32 = mon_x, mon_y+10
+        scroll_off := math.mod(t*40.0, 20.0)
+        for hi in 0..<70 {
+            hx := mon_x + i32(hi)
+            peak := math.mod(f32(hi) + scroll_off, 20.0)
+            wy: f32 = 10
+            if peak > 8 && peak < 11 { wy = 10 - 8*math.sin((peak-8)/3.0*math.PI) }
+            hy := mon_y + i32(wy)
+            if hi > 0 { rl.DrawLine(prev_hx, prev_hy, hx, hy, {60,255,120,255}) }
+            prev_hx, prev_hy = hx, hy
+        }
+
+        fan_cx, fan_cy := pxi(rx)+90, pxi(ry)+8
+        fan_spin := t*4.0
+        for bi in 0..<3 {
+            a := fan_spin + f32(bi)*(math.PI*2.0/3.0)
+            ex := fan_cx + i32(math.cos(a)*14)
+            ey := fan_cy + i32(math.sin(a)*14)
+            rl.DrawLine(fan_cx, fan_cy, ex, ey, {200,200,210,220})
+        }
+        rl.DrawCircle(fan_cx, fan_cy, 3, {160,160,170,255})
+
+        drip_t := math.mod(t*0.8, 1.0)
+        if drip_t < 0.15 {
+            rl.DrawCircle(pxi(rx)+205, pxi(ry)+40+i32(drip_t*60.0), 2, {140,200,240,220})
+        }
+
+        draw_retro_text("Dr. Flora's Office", pxi(rx)+20, pxi(ry)+80, 9, COL_DOCTOR)
+        draw_retro_text("Bee sting treatment available!", pxi(rx)+20, pxi(ry)+94, 8, COL_TEXT)
+        draw_retro_text("Honey Insurance accepted", pxi(rx)+20, pxi(ry)+108, 8, COL_TEXT2)
+
+    case .Bank:
+        rl.DrawRectangle(pxi(rx)+20, pxi(ry)+20, 60, 80, {160,150,120,255})
+        rl.DrawRectangleLinesEx({f32(pxi(rx)+20), f32(pxi(ry)+20), 60, 80}, 3, {120,110,80,255})
+        rl.DrawCircle(pxi(rx)+50, pxi(ry)+60, 18, {140,130,100,255})
+        rl.DrawCircle(pxi(rx)+50, pxi(ry)+60, 14, {160,150,120,255})
+        rl.DrawRectangle(pxi(rx)+48, pxi(ry)+42, 4, 36, {100,90,70,255})
+        rl.DrawRectangle(pxi(rx)+32, pxi(ry)+58, 36, 4, {100,90,70,255})
+
+        vault_on := math.mod(t*1.0, 1.6) < 0.8
+        vault_col := rl.Color{60,220,60,255} if vault_on else rl.Color{20,80,20,255}
+        rl.DrawCircle(pxi(rx)+50, pxi(ry)+24, 3, vault_col)
+
+        rl.DrawRectangle(pxi(rx)+100, pxi(ry)+20, pxi(rw)-120, 60, {180,160,110,255})
+        rl.DrawRectangle(pxi(rx)+100, pxi(ry)+20, pxi(rw)-120, 4, {210,190,140,255})
+
+        chand_flicker := 0.7 + 0.3*math.sin(t*2.2)
+        rl.DrawCircle(pxi(rx)+pxi(rw)/2, pxi(ry)+10, 6, rl.Color{255,225,150,u8(200.0*chand_flicker)})
+        for ci in 0..<5 {
+            ca := f32(ci)*(math.PI*2.0/5.0)
+            cx := pxi(rx)+pxi(rw)/2 + i32(math.cos(ca)*10)
+            cy := pxi(ry)+10 + i32(math.sin(ca)*4)
+            rl.DrawCircle(cx, cy, 2, {255,240,180,200})
+        }
+
+        for coi in 0..<5 {
+            cseed := u32(coi)
+            fall := math.mod(t*20.0 + mp_night_hash01(cseed*13+4)*60.0, 60.0)
+            cx := pxi(rx)+110 + i32(coi)*20
+            cy := pxi(ry)+20 + i32(fall)
+            sparkle := 0.5+0.5*math.sin(t*8.0+f32(coi))
+            rl.DrawCircle(cx, cy, 2, rl.Color{255,220,80,u8(180.0*sparkle)})
+        }
+
+        draw_retro_text("FIRST HONEY BANK", pxi(rx)+110, pxi(ry)+30, 9, COL_HONEY)
+        draw_retro_text("Deposit your honey here.", pxi(rx)+110, pxi(ry)+44, 8, COL_TEXT)
+        draw_retro_text("Thanks for visiting!", pxi(rx)+110, pxi(ry)+58, 8, COL_TEXT2)
+
+    case .Diner:
+        for ti in 0..<3 {
+            tx := pxi(rx) + 20 + i32(ti)*80
+            ty := pxi(ry) + 20
+            rl.DrawRectangle(tx, ty, 60, 40, {180,120,80,255})
+            rl.DrawRectangle(tx+2, ty+2, 56, 36, {200,140,100,255})
+            rl.DrawCircle(tx+20, ty+20, 10, {240,230,210,255})
+            rl.DrawCircle(tx+40, ty+20, 10, {240,230,210,255})
+            rl.DrawRectangle(tx+26, ty+12, 8, 12, {240,180,0,255})
+        }
+        rl.DrawRectangle(pxi(rx)+10, pxi(ry)+80, pxi(rw)-20, 20, {160,100,60,255})
+        rl.DrawRectangle(pxi(rx)+10, pxi(ry)+80, pxi(rw)-20, 3,  {200,140,90,255})
+
+        for gsi in 0..<4 {
+            gsa := f32(gsi)*1.1 + t*0.6
+            gsx := pxi(rx)+30 + i32(gsi)*20 + i32(math.sin(gsa)*3)
+            gsy := pxi(ry)+76 - i32(math.mod(t*14.0+f32(gsi)*8.0, 20.0))
+            rl.DrawCircle(gsx, gsy, 3, {255,255,255,60})
+        }
+
+        neon_flicker := 0.6 + 0.4*math.sin(t*5.0)
+        rl.DrawRectangle(pxi(rx)+16, pxi(ry)+100, pxi(rw)-32, 16, rl.Color{255,60,100,u8(60.0*neon_flicker)})
+
+        juke_x := pxi(rx)+pxi(rw)-40
+        rl.DrawRectangle(juke_x, pxi(ry)+70, 26, 40, {160,40,60,255})
+        rl.DrawRectangleLinesEx({f32(juke_x), f32(pxi(ry)+70), 26, 40}, 1, {90,20,30,255})
+        for eqi in 0..<4 {
+            eqh := i32(4.0 + 10.0*(0.5+0.5*math.sin(t*6.0+f32(eqi)*1.3)))
+            rl.DrawRectangle(juke_x+3+i32(eqi)*5, pxi(ry)+100-eqh, 4, eqh, {80,255,180,255})
+        }
+
+        draw_retro_text("HONEY POT DINER", pxi(rx)+20, pxi(ry)+108, 9, COL_DINER)
+        draw_retro_text("Best honey in Honeyville!", pxi(rx)+20, pxi(ry)+120, 8, COL_TEXT)
+        draw_retro_text("'no better nectar than the diner!'-honey times", pxi(rx)+20, pxi(ry)+132, 8, COL_TEXT2)
+
+    case .Bar:
+        rl.DrawRectangle(pxi(rx)+10, pxi(ry)+10, pxi(rw)-20, 30, {80,50,20,255})
+        rl.DrawRectangle(pxi(rx)+10, pxi(ry)+10, pxi(rw)-20, 4,  {110,75,35,255})
+        bottle_cols := [5]rl.Color{{200,80,40,255},{80,120,200,255},{60,160,80,255},{200,180,40,255},{160,60,160,255}}
+        for bi in 0..<5 {
+            bx := pxi(rx) + 20 + i32(bi)*44
+            rl.DrawRectangle(bx, pxi(ry)+12, 12, 24, bottle_cols[bi])
+            rl.DrawRectangle(bx+3, pxi(ry)+8, 6, 6, {80,60,40,255})
+            glint_y := i32(math.mod(t*18.0+f32(bi)*7.0, 24.0))
+            rl.DrawRectangle(bx+2, pxi(ry)+12+glint_y, 2, 4, {255,255,255,120})
+        }
+        for si in 0..<4 {
+            sx := pxi(rx) + 20 + i32(si)*60
+            rl.DrawCircle(sx, pxi(ry)+52, 10, {100,70,40,255})
+            rl.DrawRectangle(sx-2, pxi(ry)+52, 4, 20, {80,55,30,255})
+        }
+
+        for li in 0..<8 {
+            lx := pxi(rx)+14 + i32(li)*((pxi(rw)-28)/8)
+            lit := i32(math.mod(t*6.0, 8.0)) == i32(li)
+            lcol := rl.Color{255,220,120,255} if lit else rl.Color{120,100,60,140}
+            rl.DrawCircle(lx, pxi(ry)+6, 3, lcol)
+        }
+
+        pend_swing := math.sin(t*1.3)*5
+        pend_x := pxi(rx)+pxi(rw)/2 + i32(pend_swing)
+        rl.DrawLine(pxi(rx)+pxi(rw)/2, pxi(ry)+10, pend_x, pxi(ry)+40, {60,50,40,255})
+        rl.DrawCircle(pend_x, pxi(ry)+42, 6, {255,210,140,255})
+        rl.DrawTriangle({f32(pend_x-16), f32(pxi(ry)+70)}, {f32(pend_x+16), f32(pxi(ry)+70)}, {f32(pend_x), f32(pxi(ry)+42)}, {255,220,150,25})
+
+        draw_retro_text("THE BUZZED B's BAR", pxi(rx)+20, pxi(ry)+90, 9, COL_BAR)
+        draw_retro_text("Finest honey mead in the colony!", pxi(rx)+20, pxi(ry)+104, 8, COL_TEXT)
+        draw_retro_text("Get buzzzzzed", pxi(rx)+20, pxi(ry)+118, 8, COL_TEXT2)
+    }
+
+    draw_player()
+}
+
+interior_room_size :: proc(bt: BuildingType) -> (f32, f32) {
+	#partial switch bt {
+	case .BeeSanctuary, .FuzzyBuddyFactory:
+        return 520, 340
+    case .Market, .SheriffOffice, .DoctorOffice, .Bank, .Diner, .Bar, .CarDealership:
+        return 300, 180
+    }
+    return 300, 180
 }
 
 // DRAW HOME
@@ -11702,7 +10366,7 @@ draw_garage_interior :: proc() {
 
         slot_pos := garage_slot_pos(i)
         display  := c
-        display.active = true
+        display.active = true       // force-draw even though it's "parked"/inactive in the world
         display.pos    = slot_pos
         draw_car(display)
 
@@ -11780,6 +10444,7 @@ draw_farmers_market_interior_scene :: proc() {
         rl.DrawRectangleLinesEx({jx, jy, 18, 22}, 1, rl.Color{120,80,20,255})
     }
 
+    // Crates in the corners
     rl.DrawRectangle(pxi(room_x)+12, pxi(room_y)+pxi(room_h)-46, 30, 30, rl.Color{150,110,60,255})
     rl.DrawRectangleLinesEx({room_x+12, room_y+room_h-46, 30, 30}, 2, rl.Color{90,64,30,255})
     rl.DrawRectangle(pxi(room_x)+pxi(room_w)-42, pxi(room_y)+pxi(room_h)-46, 30, 30, rl.Color{150,110,60,255})
@@ -11881,10 +10546,15 @@ add_park_collision :: proc() {
     px := PARK_X; py := PARK_Y; pw := PARK_W; ph := PARK_H
     gate_cx := px + pw/2
 
+    // Top wall
     append(&g.collision_rects, rl.Rectangle{px, py - wall_thickness, pw, wall_thickness})
+    // Left wall
     append(&g.collision_rects, rl.Rectangle{px - wall_thickness, py, wall_thickness, ph})
+    // Right wall
     append(&g.collision_rects, rl.Rectangle{px + pw, py, wall_thickness, ph})
+    // Bottom wall — left segment (up to the gate)
     append(&g.collision_rects, rl.Rectangle{px, py + ph, (gate_cx - gate_hw) - px, wall_thickness})
+    // Bottom wall — right segment (after the gate) — this is the entrance/exit
     append(&g.collision_rects, rl.Rectangle{gate_cx + gate_hw, py + ph, (px + pw) - (gate_cx + gate_hw), wall_thickness})
 }
 add_fountain_collision :: proc() {
@@ -12070,7 +10740,11 @@ draw_player_bee_net :: proc() {
     rl.DrawLine(pxi(hand.x), pxi(hoop_y)-5, pxi(hand.x), pxi(hoop_y)+5, {210, 210, 220, 150})
 }
 
+
+
+
 // DRAW NPC (with clothing)
+
 
 draw_npc :: proc(npc: NPC) {
     x := pxi(npc.pos.x); y := pxi(npc.pos.y)
@@ -13223,14 +11897,20 @@ draw_pond :: proc() {
             body   := rl.Color{COL_PK_BODY.r,   COL_PK_BODY.g,   COL_PK_BODY.b,   alpha}
             stripe := rl.Color{COL_PK_STRIPE.r,  COL_PK_STRIPE.g, COL_PK_STRIPE.b, alpha}
             belly  := rl.Color{COL_PK_BELLY.r,   COL_PK_BELLY.g,  COL_PK_BELLY.b,  alpha}
+            // Tail
             rl.DrawRectangle(fxo(fx,12,f.flip), fy-2+tail_wag, 5, 2, body)
             rl.DrawRectangle(fxo(fx,12,f.flip), fy+1+tail_wag, 5, 2, body)
+            // Long body
             rl.DrawRectangle(fx-9, fy-2, 21, 5, body)
+            // Belly
             rl.DrawRectangle(fx-8, fy+1, 19, 2, belly)
+            // Camouflage stripes
             for si in 0..<4 {
                 rl.DrawRectangle(fx-6+i32(si)*4, fy-2, 2, 5, stripe)
             }
+            // Pointed snout
             rl.DrawRectangle(fxo(fx,-10,f.flip), fy-1, 3, 3, body)
+            // Eye
             rl.DrawRectangle(fxo(fx,-6,f.flip), fy-1, 2, 2, rl.Color{220,200,100,alpha})
 
         case .Perch:
@@ -13240,14 +11920,20 @@ draw_pond :: proc() {
             body   := rl.Color{COL_PE_BODY.r,   COL_PE_BODY.g,   COL_PE_BODY.b,   alpha}
             stripe := rl.Color{COL_PE_STRIPE.r,  COL_PE_STRIPE.g, COL_PE_STRIPE.b, alpha}
             fin    := rl.Color{COL_PE_FIN.r,     COL_PE_FIN.g,    COL_PE_FIN.b,    alpha}
+            // Tail
             rl.DrawRectangle(fxo(fx, 8, f.flip), fy-3+tail_wag, 4, 2, fin)
             rl.DrawRectangle(fxo(fx, 8, f.flip), fy+2+tail_wag, 4, 2, fin)
+            // Body
             rl.DrawRectangle(fx-6, fy-3, 14, 7, body)
+            // Vertical dark stripes (perch pattern)
             for si in 0..<4 {
                 rl.DrawRectangle(fx-4+i32(si)*3, fy-3, 1, 7, stripe)
             }
+            // Spiny dorsal fin (orange)
             rl.DrawRectangle(fx-3, fy-6, 7, 3, fin)
+            // Pectoral fin
             rl.DrawRectangle(fxo(fx,-2,f.flip), fy+2, 4, 3, fin)
+            // Eye
             rl.DrawRectangle(fxo(fx,-4,f.flip), fy-2, 2, 2, rl.Color{220,210,160,alpha})
 
 	}
@@ -13259,29 +11945,37 @@ draw_pond :: proc() {
     COL_DOCK_POST  :: rl.Color{ 80,  52,  24, 255}
 
     dock_x    := px + pw/2 - POND_DOCK_WIDTH/2
-    dock_top  := py + ph/2
-    dock_bot  := py + ph + 2
+    dock_top  := py + ph/2   // dock reaches to pond center
+    dock_bot  := py + ph + 2 // extends slightly past the pond edge (entrance)
     dock_h    := dock_bot - dock_top
 
+    // Dock shadow
     rl.DrawRectangle(pxi(dock_x)+3, pxi(dock_top)+3, pxi(POND_DOCK_WIDTH), pxi(dock_h),
         rl.Color{0, 0, 0, 50})
+    // Dock planks
     plank_count := int(dock_h / 8)
     for pi in 0..<plank_count {
         plank_y := dock_top + f32(pi) * 8
         col := COL_DOCK if pi%2==0 else COL_DOCK_LIGHT
         rl.DrawRectangle(pxi(dock_x), pxi(plank_y), pxi(POND_DOCK_WIDTH), 7, col)
     }
+    // Dock side rails
     rl.DrawRectangle(pxi(dock_x), pxi(dock_top), 3, pxi(dock_h), COL_DOCK_LIGHT)
     rl.DrawRectangle(pxi(dock_x + POND_DOCK_WIDTH) - 3, pxi(dock_top), 3, pxi(dock_h), COL_DOCK_DARK)
+    // Dock support posts 
     post_count := int(dock_h / 40) + 1
     for pi in 0..<post_count {
         post_y := dock_top + f32(pi) * 40
+        // Left post
         rl.DrawRectangle(pxi(dock_x) - 3, pxi(post_y), 4, 10, COL_DOCK_POST)
+        // Right post
         rl.DrawRectangle(pxi(dock_x + POND_DOCK_WIDTH) - 1, pxi(post_y), 4, 10, COL_DOCK_POST)
     }
+    // Dock end platform (small square at pond center)
     rl.DrawRectangle(pxi(dock_x) - 4, pxi(dock_top), pxi(POND_DOCK_WIDTH) + 8, 10, COL_DOCK_LIGHT)
 
     if g.player_in_water {
+        // Ripple rings around player when wading
         t := p.ripple_time * 3.0
         for ri in 0..<3 {
             phase := math.mod(t + f32(ri) * 1.0, 3.0)
@@ -13406,18 +12100,21 @@ draw_hud :: proc() {
             context.temp_allocator)
         day_w := rl.MeasureText(day_cstr, 7)
         day_x := i32(GAME_W) - day_w - 6
+        // Dark bezel
         bezel_x := min(clock_x, day_x) - 4
         rl.DrawRectangle(bezel_x, 2, i32(GAME_W)-bezel_x-2, 24, {0, 16, 0, 220})
         rl.DrawRectangleLinesEx({f32(bezel_x), 2, f32(i32(GAME_W)-bezel_x-2), 24},
             1, {0, 160, 60, 180})
+        // Clock digits — neon green
         rl.DrawText(clock_cstr, clock_x, 4,  10, rl.Color{0, 255, 80, 255})
+        // Day label below the time
         rl.DrawText(day_cstr,   day_x,   16,  7, rl.Color{0, 200, 60, 220})
     }
 
     rl.DrawRectangle(0, GAME_H-16, GAME_W, 16, COL_HUD_BG)
 
     rl.DrawRectangle(0, GAME_H-17, GAME_W, 1, COL_PANEL_BORDER)
-    rl.DrawText("SPACE: Toggle Phone I:Inventory  F4:Stats  F5:Save  1:Customize",8, GAME_H-12, 7, {160,160,160,220})
+    rl.DrawText("1:Customize  2:Trophies  L:List Animals  I:Inventory  F4:Stats  F5:Save  P:PhotoAlbum  C:Camera",8, GAME_H-12, 7, {160,160,160,220})
 
 
     if g.message_timer > 0 && len(g.message) > 0 {
@@ -13478,6 +12175,7 @@ draw_menu_bee :: proc(cx, cy: i32, t: f32) {
     rl.DrawRectangle(cx-2, cy+10,  4, 1, {255, 240, 100, 180})
 }
 draw_menu_squirrel :: proc(x, y: i32, t: f32) {
+    // Gentle idle bob animation
     bob := i32(math.sin(t * 1.2) * 3)
     sy  := y + bob
 
