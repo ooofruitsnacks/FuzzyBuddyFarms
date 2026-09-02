@@ -72,15 +72,30 @@ jobs:
 
       - name: Build
         run: odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
-      
-      - name: Stage release folder (Unix)
-        if: runner.os != 'Windows'
+
+      - name: Stage release folder (Linux)
+        if: runner.os == 'Linux'
         run: |
           mkdir -p release/${{ matrix.asset }}
           cp ${{ matrix.output }} release/${{ matrix.asset }}/
           cp -r assets release/${{ matrix.asset }}/
           cd release
           zip -r ${{ matrix.asset }}.zip ${{ matrix.asset }}
+
+      - name: Bundle .app (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          APP="release/${{ matrix.asset }}/FuzzyBuddyFarms.app"
+          mkdir -p "$APP/Contents/MacOS"
+          mkdir -p "$APP/Contents/Resources"
+          cp ${{ matrix.output }} "$APP/Contents/MacOS/"
+          cp packaging/macos/Info.plist "$APP/Contents/Info.plist"
+          cp packaging/macos/icon.icns "$APP/Contents/Resources/"
+          cp -r assets "$APP/Contents/Resources/"
+          chmod +x "$APP/Contents/MacOS/FuzzyBuddyFarms"
+          codesign --force --deep --sign - "$APP"
+          cd release
+          zip -r ${{ matrix.asset }}.zip "${{ matrix.asset }}"
 
       - name: Stage release folder (Windows)
         if: runner.os == 'Windows'
@@ -118,3 +133,4 @@ jobs:
         with:
           files: artifacts/**/*.zip
           generate_release_notes: true
+
