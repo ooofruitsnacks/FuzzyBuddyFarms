@@ -10,7 +10,7 @@ on:
 
 env:
   ODIN_PACKAGE_PATH: .
-  BINARY_NAME: FuzzyBuddyFarms
+  BINARY_NAME: Fuzzy_Buddy_Farms
 
 permissions:
   contents: write
@@ -27,31 +27,31 @@ jobs:
             name: Linux (amd64)
             target: linux_amd64
             output: Fuzzy_Buddy_Farms
-            asset: FuzzyBuddyFarms-linux-amd64
+            asset: Fuzzy_Buddy_Farms-linux-amd64
 
           - os: ubuntu-latest
             name: Linux (arm64 / Raspberry Pi)
             target: linux_arm64
             output: Fuzzy_Buddy_Farms
-            asset: FuzzyBuddyFarms-linux-arm64
+            asset: Fuzzy_Buddy_Farms-linux-arm64
 
           - os: windows-latest
             name: Windows (amd64)
             target: windows_amd64
             output: Fuzzy_Buddy_Farms.exe
-            asset: FuzzyBuddyFarms-windows-amd64
+            asset: Fuzzy_Buddy_Farms-windows-amd64
 
           - os: macos-15-intel
             name: macOS (amd64)
             target: darwin_amd64
             output: Fuzzy_Buddy_Farms
-            asset: FuzzyBuddyFarms-macos-amd64
+            asset: Fuzzy_Buddy_Farms-macos-amd64
 
           - os: macos-latest
             name: macOS (arm64)
             target: darwin_arm64
             output: Fuzzy_Buddy_Farms
-            asset: FuzzyBuddyFarms-macos-arm64
+            asset: Fuzzy_Buddy_Farms-macos-arm64
 
     steps:
       - name: Checkout repository
@@ -64,7 +64,7 @@ jobs:
           release: latest
 
       - name: Install Linux dependencies
-        if: runner.os == 'Linux'
+        if: matrix.target == 'linux_amd64'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -79,18 +79,31 @@ jobs:
       - name: Install ARM64 cross-compilation tools
         if: matrix.target == 'linux_arm64'
         run: |
+          set -e
           sudo dpkg --add-architecture arm64
-
           CODENAME=$(lsb_release -cs)
 
-          sudo sed -i "s/^deb /deb [arch=amd64] /" /etc/apt/sources.list
-          sudo sed -i "s/^deb-src /deb-src [arch=amd64] /" /etc/apt/sources.list
+          sudo sed -i 's/^deb \([^[]\)/deb [arch=amd64] \1/' /etc/apt/sources.list || true
+          sudo sed -i 's/^deb-src \([^[]\)/deb-src [arch=amd64] \1/' /etc/apt/sources.list || true
 
-          sudo tee /etc/apt/sources.list.d/arm64.list > /dev/null <<EOF
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${CODENAME} main restricted universe multiverse
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${CODENAME}-updates main restricted universe multiverse
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${CODENAME}-security main restricted universe multiverse
-          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${CODENAME}-backports main restricted universe multiverse
+          for f in /etc/apt/sources.list.d/*.sources; do
+            [ -e "$f" ] || continue
+            if ! grep -q '^Architectures:' "$f"; then
+              sudo sed -i '/^Signed-By:/i Architectures: amd64' "$f" || true
+            fi
+          done
+          for f in /etc/apt/sources.list.d/*.list; do
+            [ -e "$f" ] || continue
+            sudo sed -i 's/^deb \([^[]\)/deb [arch=amd64] \1/' "$f" || true
+          done
+
+          sudo tee /etc/apt/sources.list.d/arm64-ports.sources > /dev/null <<EOF
+          Types: deb
+          URIs: http://ports.ubuntu.com/ubuntu-ports
+          Suites: ${CODENAME} ${CODENAME}-updates ${CODENAME}-security ${CODENAME}-backports
+          Components: main restricted universe multiverse
+          Architectures: arm64
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
           EOF
 
           sudo apt-get update
@@ -107,14 +120,16 @@ jobs:
             libxi-dev:arm64 \
             libgl1-mesa-dev:arm64 \
             libasound2-dev:arm64
-      - name: Build
+
+      - name: Build (Linux arm64 cross-compile)
+        if: matrix.target == 'linux_arm64'
         run: |
-          if [ "${{ matrix.target }}" = "linux_arm64" ]; then
-            odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed \
-              -extra-linker-flags:"-fuse-ld=lld --target=aarch64-linux-gnu --sysroot=/usr/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu"
-          else
-            odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
-          fi
+          odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed \
+            -extra-linker-flags:"-fuse-ld=lld --target=aarch64-linux-gnu --sysroot=/usr/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu"
+
+      - name: Build
+        if: matrix.target != 'linux_arm64'
+        run: odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
 
       - name: Stage release folder (Linux)
         if: runner.os == 'Linux'
@@ -128,26 +143,26 @@ jobs:
       - name: Bundle .app (macOS)
         if: runner.os == 'macOS'
         run: |
-          APP="release/${{ matrix.asset }}/FuzzyBuddyFarms.app"
+          APP="release/${{ matrix.asset }}/Fuzzy_Buddy_Farms.app"
           mkdir -p "$APP/Contents/MacOS"
           mkdir -p "$APP/Contents/Resources"
           cp ${{ matrix.output }} "$APP/Contents/MacOS/"
           cp packaging/macos/Info.plist "$APP/Contents/Info.plist"
           cp packaging/macos/icon.icns "$APP/Contents/Resources/"
           cp -r assets "$APP/Contents/Resources/"
-          chmod +x "$APP/Contents/MacOS/${{ matrix.output }}"
+          chmod +x "$APP/Contents/MacOS/Fuzzy_Buddy_Farms"
           codesign --force --deep --sign - "$APP"
           cd release
           zip -r ${{ matrix.asset }}.zip "${{ matrix.asset }}"
 
       - name: Stage release folder (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          mkdir release\${{ matrix.asset }}
-          copy ${{ matrix.output }} release\${{ matrix.asset }}\
-          xcopy assets release\${{ matrix.asset }}\assets\ /E /I
-          cd release
-          Compress-Archive -Path ${{ matrix.asset }} -DestinationPath ${{ matrix.asset }}.zip
+          New-Item -ItemType Directory -Force -Path "release/${{ matrix.asset }}"
+          Copy-Item "${{ matrix.output }}" "release/${{ matrix.asset }}/"
+          Copy-Item "assets" "release/${{ matrix.asset }}/assets" -Recurse
+          Compress-Archive -Path "release/${{ matrix.asset }}" -DestinationPath "release/${{ matrix.asset }}.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
