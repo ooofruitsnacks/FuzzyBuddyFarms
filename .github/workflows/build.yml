@@ -114,6 +114,8 @@ jobs:
             g++-aarch64-linux-gnu \
             libc6-dev-arm64-cross \
             libx11-dev:arm64 \
+            libgcc-s1:arm64 \
+            libstdc++6:arm64 \
             libxrandr-dev:arm64 \
             libxinerama-dev:arm64 \
             libxcursor-dev:arm64 \
@@ -124,8 +126,12 @@ jobs:
       - name: Build (Linux arm64 cross-compile)
         if: matrix.target == 'linux_arm64'
         run: |
-          odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed \
-            -extra-linker-flags:"-fuse-ld=lld --target=aarch64-linux-gnu --sysroot=/usr/aarch64-linux-gnu -L/usr/lib/aarch64-linux-gnu"
+          set -e
+          GCC_DIR=$(dirname $(aarch64-linux-gnu-gcc -print-libgcc-file-name))
+        echo "Using GCC cross dir: $GCC_DIR"
+        odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed \
+          -extra-linker-flags:"-fuse-ld=lld --target=aarch64-linux-gnu --sysroot=/usr/aarch64-linux-gnu --gcc-toolchain=/usr -B${GCC_DIR} -L${GCC_DIR} -L/usr/lib/aarch64-linux-gnu -L/usr/aarch64-linux-gnu/lib"
+
 
       - name: Build
         if: matrix.target != 'linux_arm64'
