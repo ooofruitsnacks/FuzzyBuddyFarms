@@ -1,5 +1,20 @@
 # Welcome to Honeyville! :honey_pot: :tada: :honeybee:
 
+## Table of Contents
+
+- [How to play](#how-to-play-honeybee)
+- [Download](#download-honeybee)
+- [Verify SHA256 Fingerprint](#verify-release-checksum)
+  - [Apple Warning bypass](#apple-warning-bypass)
+- [Build From Source](#build-from-source)
+  - [macOS (Silicon/arm64/Intel/amd64)](#macos-siliconarm64intelamd64)
+  - [Windows (amd64 / intel or amd)](#windows-amd64--intel-or-amd)
+  - [Linux (amd64/aarch64)](#linux-amd64aarch64)
+  - [Linux (arm64/aarch64)](#linux-arm64aarch64)
+- [License](#license)
+- [Security Policy](#security-policy)
+
+
 Please go to the Wiki section for a complete guide of the game with tips, key binds, easter eggs, and information on the story-line. A lot of time and passion has gone into this project. I hope you enjoy it! :tada:
 
 I'm the only person building, testing, and improving this game so please be patient lol. I created FuzzyBuddyFarms because I wanted to learn Odin and because I wanted to try to build a real video game. My approach is a little different compared to other conventional video games, the entire game consists of 1 single odin file and only 1 asset. The asset was added as an easter egg and originally I was against using assets but I made one exception. There are no shaders, physics engines, or API calls. Everything is rendered and drawn using Raylib with vector math. This was done intentionally so anyone can play this game on any machine. You can run this game on pretty much any hardware from the past 2 decades.
@@ -31,7 +46,31 @@ __Go to the release section of FuzzyBuddyFarms__
 
 Click on the zip file for your hardware architecture and download that zip file. Just a heads up, it will flash a spooky warning message but don't be alarmed. This is just because it is not signed with a certificate but good news! Everything is completely open source so you can verify everything yourself! Wow!
 
- 
+# Verify Release Checksum
+
+Each release includes a `checksums.txt` file with SHA256 hashes for every zip. To verify your download hasn't been tampered with:
+
+**macOS / Linux:**
+
+Open the directory where you have FuzzyBuddyFarms saved and run:
+
+```
+shasum -a 256 -c checksums.txt
+```
+
+Compare the output against the matching line in `checksums.txt`.
+
+**Windows:**
+
+Open the directory where you have FuzzyBuddyFarms saved and run:
+
+```
+Get-FileHash .\Fuzzy_Buddy_Farms-windows-amd64.zip -Algorithm SHA256
+```
+
+Compare the output against the matching line in `checksums.txt`.
+
+
 ## Apple Warning bypass 
 
 As I mentioned above, your OS will probably display a warning message when you try to execute the program. For Apple users this can be over ridden with the steps below. If you are not comfortable with this option, please download from Steam. 
@@ -323,6 +362,17 @@ If it fails to run, install the runtime counterparts and then try again:
 ```
 sudo apt install -y libx11-6 libxrandr2 libxinerama1 libxcursor1 libxi6 libgl1 libasound2t64
 ```
+
+# License
+
+FuzzyBuddyFarms is licensed under the [GNU General Public License v2.0](LICENSE).
+
+This means you're free to run, study, modify, and redistribute the source code — but any distributed modified versions must also be licensed under GPLv2 and made available in source form. See the [LICENSE](LICENSE) file for the full terms.
+
+# Security Policy
+
+Found a security vulnerability? Please __DON'T__ open a public issue for it — see [SECURITY.md](SECURITY.md) for how to report it responsibly.
+
 
 Enjoy the game!
 
