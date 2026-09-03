@@ -17,8 +17,6 @@ You spawn into Honeyville with a small plot of land to get started. The starting
 >[!NOTE]
 >FuzzyBuddyFarms will be available on steam as well!
 
-Go to the release section of FuzzyBuddyFarms.
-
 | Platform | Download |
 |---|---|
 | Windows (64bit / Intel or AMD) | `Fuzzy_Buddy_Farms-windows-amd64.zip` |
@@ -27,26 +25,26 @@ Go to the release section of FuzzyBuddyFarms.
 | Linux (64bit / Intel or AMD) | `Fuzzy_Buddy_Farms-linux-amd64.zip` |
 | Linux ARM64 (Raspberry Pi 3/4/5/400) | `Fuzzy_Buddy_Farms-linux-arm64.zip` |
 
+__Go to the release section of FuzzyBuddyFarms__
 
 <img width="376" height="153" alt="Screenshot 2026-09-01 at 12 35 23 PM" src="https://github.com/user-attachments/assets/00a3d533-335c-4215-a335-7c946307e2f5" />
 
-Click on the zip file for your hardware architecture and download that zip file. 
+Click on the zip file for your hardware architecture and download that zip file. Just a heads up, it will flash a spooky warning message but don't be alarmed. This is just because it is not signed with a certificate but good news! Everything is completely open source so you can verify everything yourself! Wow!
 
-<img width="1236" height="515" alt="Screenshot 2026-09-01 at 12 44 04 PM" src="https://github.com/user-attachments/assets/9de708d5-ced2-488c-ae77-b1bba0fc3056" />
+ 
+## Apple Warning bypass 
 
-For Apple users, it will flash a spooky warning message but don't be alarmed. 
-
-This is just because it is not verified by Apple directly, good news everything is completely open source so you can verify everything yourself. 
-
-Close out of the spooky scary urgent warning message and locate "Privacy and Security", about mid way down in the main menu.
+As I mentioned above, your OS will probably display a warning message when you try to execute the program. For Apple users this can be over ridden with the steps below. If you are not comfortable with this option, please download from Steam. 
+ 
+__Close out of the spooky scary urgent warning message and locate "Privacy and Security", about mid way down in the main menu:__
 
 <img width="221" height="110" alt="Screenshot 2026-09-01 at 12 39 22 PM" src="https://github.com/user-attachments/assets/6878a18c-8777-4325-827c-fd9b6a8250c5" />
 
-Scroll all the way down and find:
+__Scroll all the way down and find:__
 
 <img width="479" height="184" alt="Screenshot 2026-09-01 at 12 33 09 PM" src="https://github.com/user-attachments/assets/b4aa33c0-b0a1-43aa-9b72-91390c1b1771" />
 
-Click open anyway and it will open another prompt window. 
+__Click open anyway and it will open another prompt window:__
 
 Click "Open Anyway" again in the window and then relaunch FuzzyBuddyFarms. It will now open and run the game.
 
@@ -57,7 +55,7 @@ Click "Open Anyway" again in the window and then relaunch FuzzyBuddyFarms. It wi
 
 If you don't trust pre-bundled packages or if you want to make your own changes to the source code to have a more unique bee farming experience, you can do so easily by building from source for your machine. Below is a full step by step guide to build from source. Enjoy :)
 
-## macOS (arm64)
+## macOS (silicon/m series/arm64)
 
 If you don't use steam and want to download it directly from github, don't worry it's very easy!
 
@@ -99,7 +97,7 @@ Then run to build an executable. This will not build unless you have Odin instal
 odin build . -out:FUZZYBUDDYFARMS -o:speed && odin build . -out:FUZZYBUDDYFARMS -o:speed -extra-linker-flags:"-rpath @executable_path"
 ```
 
-## Windows (amd64)
+## Windows (amd64 / intel or amd)
 
 Please ensure you have ```Odin``` downloaded and installed, along with the ```MSVC``` compiler and Windows SDK.
 
