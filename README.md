@@ -19,6 +19,15 @@ You spawn into Honeyville with a small plot of land to get started. The starting
 
 Go to the release section of FuzzyBuddyFarms.
 
+| Platform | Download |
+|---|---|
+| Windows (64bit / Intel or AMD) | `Fuzzy_Buddy_Farms-windows-amd64.zip` |
+| macOS (Apple Silicon / M series) | `Fuzzy_Buddy_Farms-macos-arm64.zip` |
+| macOS (Intel) | `Fuzzy_Buddy_Farms-macos-amd64.zip` |
+| Linux (64bit / Intel or AMD) | `Fuzzy_Buddy_Farms-linux-amd64.zip` |
+| Linux ARM64 (Raspberry Pi 3/4/5/400) | `Fuzzy_Buddy_Farms-linux-arm64.zip` |
+
+
 <img width="376" height="153" alt="Screenshot 2026-09-01 at 12 35 23 PM" src="https://github.com/user-attachments/assets/00a3d533-335c-4215-a335-7c946307e2f5" />
 
 Click on the zip file for your hardware architecture and download that zip file. 
