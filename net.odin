@@ -25,11 +25,11 @@ Net_Role :: enum { None, Host, Client }
 
 Packet_Type :: enum u8 {
     Join, Welcome, PlayerState, Leave, StartGame,
-    PlotAction,       // client -> host: request to modify a plot
-    WorldSyncStart,   // host -> client: begin a world snapshot transfer
-    WorldSyncChunk,   // host -> client: one piece of the snapshot
-    WorldSyncEnd,     // host -> client: snapshot complete, apply it
-    ActionResult,     // host -> client: success/failure feedback for a PlotAction
+    PlotAction,
+    WorldSyncStart,
+    WorldSyncChunk,
+    WorldSyncEnd,
+    ActionResult,
 }
 
 packet_kind_is_valid :: proc(k: Packet_Type) -> bool {
@@ -80,8 +80,6 @@ Packet :: struct {
     passphrase:     [NET_PASSPHRASE_LEN]u8,
     passphrase_len: int,
 }
-
-// ---- World sync wire structs ----
 
 Net_Plot :: struct {
     rect:            [4]f32,
@@ -433,9 +431,9 @@ net_handle_packet :: proc(pkt: Packet, from: net.Endpoint) {
                 wbuf := transmute([size_of(Packet)]u8)welcome
                 net.send_udp(net_state.socket, wbuf[:], from)
 
-                net_send_world_snapshot(from) // newcomer sees the real farm immediately
+                net_send_world_snapshot(from)
 
-                show_message("A friend joined your farm!", 3)
+                show_message("A farmer has joined Honeyville!", 4)
                 return
             }
         }
@@ -470,7 +468,6 @@ net_handle_packet :: proc(pkt: Packet, from: net.Endpoint) {
         }
 
     case .PlotAction, .WorldSyncStart, .WorldSyncChunk, .WorldSyncEnd, .ActionResult:
-        // dispatched earlier in net_update via their own typed structs — never reaches here
     }
 }
 
@@ -549,7 +546,6 @@ net_broadcast :: proc(pkt: Packet) {
     }
 }
 
-// ---- World snapshot: host builds + sends ----
 
 net_send_world_snapshot :: proc(to: net.Endpoint) {
     plot_count     := len(g.plots)
@@ -618,8 +614,6 @@ net_broadcast_world_snapshot :: proc() {
         if net_state.client_active[i] { net_send_world_snapshot(net_state.client_eps[i]) }
     }
 }
-
-// ---- World snapshot: client receives + applies ----
 
 net_on_world_sync_start :: proc(p: WorldSync_Start_Packet) {
     if p.total_bytes < 0 || p.total_bytes > 2_000_000 { return }
@@ -697,8 +691,6 @@ net_on_world_sync_end :: proc() {
         g.buildings[nbld.kind].owned = nbld.owned
     }
 
-    // rebuild each plot's box-index list purely from bee_boxes[i].on_plot —
-    // required so client-side hive-limit checks in apply_place_box see correct counts
     for i in 0..<len(g.plots) { clear(&g.plots[i].boxes) }
     for i in 0..<len(g.bee_boxes) {
         op := g.bee_boxes[i].on_plot
@@ -711,8 +703,6 @@ net_on_world_sync_end :: proc() {
     g.season_time = h.season_time; g.season = h.season
     show_message("World synced!", 2)
 }
-
-// ---- Plot actions: client requests, host validates + applies ----
 
 net_request_plot_action :: proc(plot_index: int, action: PlotActionType, pos: Vec2, box_kind: BoxType = .SmallGround) {
     if net_state.role != .Client { return }
@@ -732,7 +722,7 @@ net_on_plot_action :: proc(pkt: PlotAction_Packet, from: net.Endpoint) {
     for i in 0..<NET_MAX_PLAYERS {
         if net_state.client_active[i] && net_state.client_eps[i] == from { requester_slot = i; break }
     }
-    if requester_slot < 0 { return } // must already be a joined, address-matched client
+    if requester_slot < 0 { return }
     if player_rate_limited(requester_slot) { return }
 
     pos := Vec2{pkt.pos[0], pkt.pos[1]}
@@ -770,7 +760,7 @@ net_send_action_result :: proc(to: net.Endpoint, success: bool, msg: string) {
 net_on_action_result :: proc(p: ActionResult_Packet) {
     if net_state.role != .Client { return }
     if p.msg_len < 0 || p.msg_len > NET_ACTION_MSG_LEN { return }
-    if p.msg_len == 0 { return } // matches original silent-no-op behavior (e.g. empty box collect)
+    if p.msg_len == 0 { return }
     p := p
     show_message(string(p.msg[:p.msg_len]))
 }

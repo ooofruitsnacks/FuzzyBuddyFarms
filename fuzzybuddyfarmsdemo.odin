@@ -1,4 +1,4 @@
-// FuzzyBuddyFarms beta demo v.0.2.2
+// FuzzyBuddyFarms beta demo v.0.2.5
 // an open source game created by Owen Edwards | ACS "a creative solution"
 // for everyone to enjoy :) work in progress
 package main
@@ -6159,7 +6159,6 @@ draw_multiplayer_ip_entry :: proc() {
     py := f32(GAME_H)/2 - ph/2
     draw_panel(px, py, pw, ph, "=== JOIN GAME ===")
 
-    // --- IP field ---
     rl.DrawText("Enter host IP address:", pxi(px)+8, pxi(py)+28, 9, COL_TEXT)
 
     ip_box_y   := py + 44
@@ -6176,7 +6175,6 @@ draw_multiplayer_ip_entry :: proc() {
     rl.DrawText(strings.clone_to_cstring(ip_display, context.temp_allocator),
         pxi(px)+14, pxi(ip_box_y)+6, 9, COL_TEXT)
 
-    // --- Passphrase field ---
     rl.DrawText("Passphrase (if host set one):", pxi(px)+8, pxi(py)+72, 9, COL_TEXT)
 
     pass_box_y   := py + 88
@@ -6198,6 +6196,7 @@ draw_multiplayer_ip_entry :: proc() {
 }
 
 draw_multiplayer_lobby :: proc() {
+
     draw_mp_night_backdrop()
     pw :: f32(260); ph :: f32(200)
     px := f32(GAME_W)/2 - pw/2
@@ -6205,7 +6204,10 @@ draw_multiplayer_lobby :: proc() {
     title := "=== HOSTING LOBBY ===" if net_state.role == .Host else "=== JOINED LOBBY ==="
     draw_panel(px, py, pw, ph, title)
 
-    rl.DrawText("You (Player 0)", pxi(px)+8, pxi(py)+26, 8, COL_HONEY2)
+    you_label := fmt.aprintf("You (Player %d)", net_state.local_id, allocator = context.temp_allocator)
+    rl.DrawText(strings.clone_to_cstring(you_label, context.temp_allocator),
+	pxi(px)+8, pxi(py)+26, 8, COL_HONEY2)
+
 
     row := 1
     for i in 0..<NET_MAX_PLAYERS {
@@ -6566,7 +6568,6 @@ update_world :: proc() {
     if g.death_active { return }
 
     g.dt = rl.GetFrameTime()
-    net_update()
     g.total_play_time += g.dt
     g.input_c_consumed = false
     g.input_e_consumed = false
@@ -13937,6 +13938,10 @@ main :: proc() {
 	   g.state != .MultiplayerMenu && g.state != .MultiplayerIPEntry &&
 	   g.state != .MultiplayerLobby && g.state != .MultiplayerHostPassphrase {
 	    update_player_needs()
+	}
+
+	if net_state.role != .None {
+	    net_update()
 	}
 
         #partial switch g.state {
