@@ -4173,70 +4173,70 @@ update_festival_npcs :: proc(dt: f32) {
     }
 }
 
-
-
-
 update_environment :: proc() {
     dt := g.dt
+    if net_state.role != .Client {
+        g.day_time += dt
+        if g.day_time >= DAY_DURATION {
+            g.day_time -= DAY_DURATION
+            apply_property_tax()
+        }
 
-    g.day_time += dt
-    if g.day_time >= DAY_DURATION {
-        g.day_time -= DAY_DURATION
-        apply_property_tax()
-}
+        g.season_time += dt
+        if g.season_time >= SEASON_DURATION {
+            g.season_time -= SEASON_DURATION
+            switch g.season {
+            case .Spring: g.season = .Summer;  show_message("The season has changed to Summer!", 5)
+            case .Summer: g.season = .Fall;    show_message("The season has changed to Fall!", 5)
+            case .Fall:   g.season = .Winter;  show_message("The season has changed to Winter!", 5)
+            case .Winter: g.season = .Spring;  show_message("The season has changed to Spring!", 5)
+            }
+            push_honey_stock(honey_value_per_liter())
+        }
+
+        if g.rain_timer > 0 {
+            g.rain_timer -= dt
+            if g.rain_timer <= 0 {
+                g.rain_timer = 0
+                show_message("The rain has stopped.", 4)
+                g.rain_cooldown = RAIN_INTERVAL + rand_f32(-120, 120)
+                g.weather_state_timer = 0
+            }
+        } else {
+            g.rain_cooldown -= dt
+            if g.rain_cooldown <= 0 {
+                g.rain_timer    = RAIN_DURATION
+                g.rain_cooldown = RAIN_INTERVAL
+                show_message("A rain storm has started! Bees are sheltering.", 5)
+                g.weather_state_timer = 0
+            }
+        }
+
+        if g.auction_timer > 0 {
+            g.auction_timer -= dt
+            if g.auction_timer <= 0 {
+                g.auction_timer = 0
+                show_message("The Rare Honey Auction has ended.", 5)
+                g.auction_cooldown = rand_f32(AUCTION_MIN_WAIT, AUCTION_MAX_WAIT)
+            }
+        } else {
+            g.auction_cooldown -= dt
+            if g.auction_cooldown <= 0 {
+                g.auction_timer    = AUCTION_DURATION
+                g.auction_cooldown = rand_f32(AUCTION_MIN_WAIT, AUCTION_MAX_WAIT)
+                push_honey_stock(honey_value_per_liter() * AUCTION_MULT)
+                show_message("Rare Honey Auction at the Bank! Honey is worth 5x!", 6)
+            }
+        }
+    }
+
     day_frac := g.day_time / DAY_DURATION
     g.is_night = day_frac >= NIGHT_START
-
-    g.season_time += dt
-    if g.season_time >= SEASON_DURATION {
-        g.season_time -= SEASON_DURATION
-        switch g.season {
-        case .Spring: g.season = .Summer;  show_message("The season has changed to Summer!", 5)
-        case .Summer: g.season = .Fall;    show_message("The season has changed to Fall!", 5)
-        case .Fall:   g.season = .Winter;  show_message("The season has changed to Winter!", 5)
-        case .Winter: g.season = .Spring;  show_message("The season has changed to Spring!", 5)
-        }
-        push_honey_stock(honey_value_per_liter())
-    }
-
-    if g.rain_timer > 0 {
-        g.rain_timer -= dt
-        if g.rain_timer <= 0 {
-            g.rain_timer = 0
-            show_message("The rain has stopped.", 4)
-            g.rain_cooldown = RAIN_INTERVAL + rand_f32(-120, 120)
-	    g.weather_state_timer = 0
-        }
-    } else {
-        g.rain_cooldown -= dt
-        if g.rain_cooldown <= 0 {
-            g.rain_timer    = RAIN_DURATION
-            g.rain_cooldown = RAIN_INTERVAL
-            show_message("A rain storm has started! Bees are sheltering.", 5)
-	    g.weather_state_timer = 0
-        }
-    }
-if g.auction_timer > 0 {
-    g.auction_timer -= dt
-    if g.auction_timer <= 0 {
-        g.auction_timer = 0
-        show_message("The Rare Honey Auction has ended.", 5)
-        g.auction_cooldown = rand_f32(AUCTION_MIN_WAIT, AUCTION_MAX_WAIT)
-    }
-} else {
-    g.auction_cooldown -= dt
-    if g.auction_cooldown <= 0 {
-        g.auction_timer    = AUCTION_DURATION
-        g.auction_cooldown = rand_f32(AUCTION_MIN_WAIT, AUCTION_MAX_WAIT)
-        push_honey_stock(honey_value_per_liter() * AUCTION_MULT)
-        show_message("Rare Honey Auction at the Bank! Honey is worth 5x!", 6)
-    }
 }
 
-}
 
 update_bee_boxes :: proc() {
-    if net_state.role == .Client { return } // host (or singleplayer) is sole authority on honey accrual
+    if net_state.role == .Client { return }
     dt := g.dt
     for i in 0..<len(g.bee_boxes) {
         box := &g.bee_boxes[i]
@@ -4404,7 +4404,6 @@ update_soccer :: proc() {
     g.player.pos.x = clamp(g.player.pos.x, fx + wall + pr, fx + fw - wall - pr)
     g.player.pos.y = clamp(g.player.pos.y, fy + wall + pr, fy + fh - wall - pr)
 
-    // Slide tackle
     if rl.IsKeyPressed(.X) {
         dist_to_ball := vec2_dist(g.player.pos, sg.ball.pos)
         if dist_to_ball < SOCCER_TACKLE_DIST {
@@ -4896,13 +4895,9 @@ wrap_text_lines :: proc(text: string, font_size: i32, max_width: f32) -> []strin
 }
 
 draw_phone_icon :: proc(x, y, size: f32, col: rl.Color, selected: bool) {
-    // drop shadow
     rl.DrawRectangle(pxi(x) + 1, pxi(y) + 1, pxi(size), pxi(size), rl.Color{0, 0, 0, 90})
-    // icon body
     rl.DrawRectangle(pxi(x), pxi(y), pxi(size), pxi(size), col)
-    // gloss highlight strip
     rl.DrawRectangle(pxi(x) + 1, pxi(y) + 1, pxi(size) - 2, 2, rl.Color{255, 255, 255, 70})
-    // selection ring
     if selected {
         rl.DrawRectangleLines(pxi(x) - 2, pxi(y) - 2, pxi(size) + 4, pxi(size) + 4, COL_HONEY)
     }
@@ -5343,17 +5338,11 @@ draw_yoda :: proc() {
 
     x  := pxi(y.pos.x)
     yy := pxi(y.pos.y + bob)
-
-    // Robe
     rl.DrawRectangle(x-5, yy-6, 10, 12, COL_YODA_ROBE)
     rl.DrawRectangle(x-5, yy+2, 10, 4,  COL_YODA_ROBE2)
-
-    // Head 
     rl.DrawRectangle(x-4, yy-14, 8, 8, COL_YODA_SKIN)
     rl.DrawRectangle(x-7, yy-13, 3, 5, COL_YODA_SKIN)
     rl.DrawRectangle(x+4, yy-13, 3, 5, COL_YODA_SKIN)
-
-    // Eyes
     rl.DrawRectangle(x-3, yy-11, 2, 2, {10,10,10,255})
     rl.DrawRectangle(x+1, yy-11, 2, 2, {10,10,10,255})
 
@@ -5466,7 +5455,6 @@ draw_animal_buddy :: proc() {
 
 
     case .R2D2:
-    	// blink timing — red indicator pulses, logic-display squares blink independently
     	t   := a.anim_time
     	cyc := t - math.floor(t/1.8) * 1.8
     	red_on    := cyc < 0.3
@@ -5476,23 +5464,14 @@ draw_animal_buddy :: proc() {
     	red_col   := COL_R2D2_RED        if red_on   else rl.Color{100, 25, 25, 200}
     	logic_col := COL_R2D2_BLUE_LIGHT if logic_on else COL_R2D2_BLUE
 
-    	// ground shadow
     	rl.DrawEllipse(x, yy+10, 8, 2, COL_SHADOW)
-
-    	// slender front legs (thin cylinders, not chunky blocks)
     	rl.DrawRectangle(x-8, yy-3, 3, 10, COL_R2D2_WHITE)
     	rl.DrawRectangle(x-8, yy+7, 3, 2, COL_R2D2_GRAY)
     	rl.DrawRectangle(x+6, yy-3, 3, 10, COL_R2D2_WHITE)
     	rl.DrawRectangle(x+6, yy+7, 3, 2, COL_R2D2_GRAY)
-
-    	// barrel body
     	rl.DrawRectangle(x-6, yy-6, 12, 10, COL_R2D2_WHITE)
-
-    	// vertical blue side panels on body
     	rl.DrawRectangle(x-6, yy-6, 2, 8, COL_R2D2_WHITE)
     	rl.DrawRectangle(x+4, yy-6, 2, 8, COL_R2D2_WHITE)
-
-    	// two horizontal blue stripe panels (mid body)
     	rl.DrawRectangle(x-3, yy-4, 6, 1, COL_R2D2_GRAY)
     	rl.DrawRectangle(x-3, yy-2, 6, 1, COL_R2D2_BLUE)
 
@@ -5500,26 +5479,15 @@ draw_animal_buddy :: proc() {
     	rl.DrawRectangle(x-3, yy-1, 6, 1, COL_R2D2_GRAY)
     	rl.DrawRectangle(x-2, yy+1, 4, 1, COL_R2D2_BLUE)
 
-    	// blue collar stripe where dome meets body
     	rl.DrawRectangle(x-6, yy-7, 12, 1, COL_R2D2_GRAY)
-
-    	// dome head — rounded via layered rectangles
     	rl.DrawRectangle(x-5, yy-13, 10, 6, COL_R2D2_WHITE)
     	rl.DrawRectangle(x-4, yy-14, 8, 1, COL_R2D2_GRAY)
-
-    	// small blue "logic display" lights, far left of dome, blink independently
     	rl.DrawRectangle(x-4, yy-11, 1, 1, logic_col)
     	rl.DrawRectangle(x-4, yy-9,  1, 1, logic_col)
-
-    	// large black photoreceptor eye with blue frame, offset left of center
     	rl.DrawRectangle(x-2, yy-12, 4, 4, COL_R2D2_BLUE)
     	rl.DrawCircle(x, yy-10, 2, COL_R2D2_EYE_BLACK)
-    	rl.DrawCircle(x-1, yy-11, 1, rl.Color{255, 255, 255, glint_a}) // eye glint
-
-    	// blinking red indicator light, below/right of the eye
+    	rl.DrawCircle(x-1, yy-11, 1, rl.Color{255, 255, 255, glint_a})
     	rl.DrawCircle(x+3, yy-9, 1, red_col)
-
-    	// small silver logic-vent slot, right side of dome
     	rl.DrawRectangle(x+4, yy-11, 1, 2, COL_R2D2_DARKGRAY)
 }
 }
@@ -6293,14 +6261,12 @@ draw_market_menu_item :: proc(x, y, w, h: f32, label: string, index: int, font_s
     cstr := strings.clone_to_cstring(label, context.temp_allocator)
     rl.DrawText(cstr, pxi(x)+14, pxi(y)+pxi(h)/2-font_size/2, font_size, COL_TEXT)
 }
-// --- Multiplayer night backdrop (visual only, no state) ---
 MP_NIGHT_STAR_COUNT     :: 40
 MP_NIGHT_FIREFLY_COUNT  :: 22
 COL_MP_NIGHT_TOP    :: rl.Color{ 10,  14,  40, 255}
 COL_MP_NIGHT_BOTTOM :: rl.Color{ 35,  30,  70, 255}
 COL_MP_FIREFLY      :: rl.Color{200, 255, 140, 255}
 
-// Deterministic hash -> [0,1), mirrors get_sanctuary_bee_speed's approach
 mp_night_hash01 :: proc(seed: u32) -> f32 {
     h := seed * 374761393 + 668265263
     h = (h ~ (h >> 13)) * 1274126177
@@ -6311,10 +6277,8 @@ mp_night_hash01 :: proc(seed: u32) -> f32 {
 draw_mp_night_backdrop :: proc() {
     t := f32(rl.GetTime())
 
-    // Night sky gradient (replaces the plain green fill)
     rl.DrawRectangleGradientV(0, 0, GAME_W, GAME_H, COL_MP_NIGHT_TOP, COL_MP_NIGHT_BOTTOM)
 
-    // Twinkling stars
     for i in 0..<MP_NIGHT_STAR_COUNT {
         sx := mp_night_hash01(u32(i)*7  + 1) * f32(GAME_W)
         sy := mp_night_hash01(u32(i)*13 + 2) * f32(GAME_H) * 0.75
@@ -6324,7 +6288,6 @@ draw_mp_night_backdrop :: proc() {
         rl.DrawCircle(pxi(sx), pxi(sy), 1, rl.Color{255,255,255,a})
     }
 
-    // Fireflies: organic wander + flicker on/off
     for i in 0..<MP_NIGHT_FIREFLY_COUNT {
         seed  := u32(i)
         speed := 0.15 + mp_night_hash01(seed*3+5)*0.25
@@ -6332,14 +6295,13 @@ draw_mp_night_backdrop :: proc() {
         py := f32(GAME_H)*0.55 + math.cos(t*speed*1.3 + mp_night_hash01(seed*9+11)*6.283) * (f32(GAME_H)*0.32)
 
         flicker := 0.5 + 0.5*math.sin(t*3.0 + mp_night_hash01(seed*17+2)*6.283)
-        if flicker < 0.35 { continue } // fireflies periodically go dark
+        if flicker < 0.35 { continue }
 
         glow_a := u8(60.0 + 120.0*flicker)
         rl.DrawCircleV({px, py}, 4,   rl.Color{COL_MP_FIREFLY.r, COL_MP_FIREFLY.g, COL_MP_FIREFLY.b, glow_a/3})
         rl.DrawCircleV({px, py}, 1.5, rl.Color{COL_MP_FIREFLY.r, COL_MP_FIREFLY.g, COL_MP_FIREFLY.b, glow_a})
     }
 
-    // Shooting star: one streaks by every ~4.5s, deterministic per cycle
     STAR_CYCLE :: f32(4.5)
     cycle_idx := u32(t / STAR_CYCLE)
     cycle_t   := math.mod(t, STAR_CYCLE)
@@ -6749,14 +6711,13 @@ draw_animal_menu :: proc() {
 
     row_h      := f32(28)
     pad_top    := f32(22)
-    pad_bottom := f32(16) // reserved so the list never draws over the footer hint text
+    pad_bottom := f32(16)
     list_top   := py + pad_top
     list_h     := ph - pad_top - pad_bottom
 
-    total_items := ANIMAL_BUDDY_COUNT + 1 // +1 for "None"
+    total_items := ANIMAL_BUDDY_COUNT + 1
     max_scroll  := max(f32(total_items) * row_h - list_h, 0)
 
-    // Keep the selected row centered in the visible window, clamped to valid range
     target_scroll := f32(g.animal_menu_cursor) * row_h - list_h/2 + row_h/2
     scroll := clamp(target_scroll, 0, max_scroll)
 
@@ -6765,7 +6726,7 @@ draw_animal_menu :: proc() {
     for i in 0..<ANIMAL_BUDDY_COUNT {
         kind := AnimalBuddyType(i)
         by   := list_top + f32(i)*row_h - scroll
-        if by + row_h < list_top || by > list_top + list_h { continue } // skip off-screen rows
+        if by + row_h < list_top || by > list_top + list_h { continue }
 
         owned := g.owned_animal_buddies[kind]
         label: string
@@ -6935,7 +6896,9 @@ update_world :: proc() {
 	update_camera()
     }
 
-    update_npcs()
+    if net_state.role != .Client {
+        update_npcs()
+    }
     update_environment()
     update_festival(g.dt)
     update_festival_npcs(g.dt)
@@ -7772,15 +7735,13 @@ handle_home_trophy_pick_menu :: proc() {
     confirm := rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.KP_ENTER)
     if g.menu_frame_skip { confirm = false; g.menu_frame_skip = false }
 
-
-    // Build the candidate list length: Empty + discovered animals + discovered fish + photos
     animal_list := make([dynamic]AnimalType, context.temp_allocator)
     for kind in AnimalType { if g.discovered_animals[kind] { append(&animal_list, kind) } }
     fish_list := make([dynamic]FishType, context.temp_allocator)
     for kind in FishType { if g.discovered_fish[kind] { append(&fish_list, kind) } }
     photo_count := len(g.camera_roll)
 
-    num_items := 1 + len(animal_list) + len(fish_list) + photo_count + len(gallery_textures) + 1 // +1 Empty, +1 Cancel
+    num_items := 1 + len(animal_list) + len(fish_list) + photo_count + len(gallery_textures) + 1
     if rl.IsKeyPressed(.UP)   { g.menu_cursor -= 1; if g.menu_cursor < 0 { g.menu_cursor = num_items-1 } }
     if rl.IsKeyPressed(.DOWN) { g.menu_cursor += 1; if g.menu_cursor >= num_items { g.menu_cursor = 0 } }
 
@@ -8413,7 +8374,7 @@ update_menus :: proc() {
     case .CarDealerMenu:     handle_car_dealer_menu()
     case .BeeSanctuaryMenu:  handle_bee_sanctuary_menu()
     case .FuzzyBuddyMenu:    handle_fuzzy_buddy_menu()
-    case .World, .Interior, .HomeInterior, .GarageInterior, .MainMenu, .HelpMenu: // no-op
+    case .World, .Interior, .HomeInterior, .GarageInterior, .MainMenu, .HelpMenu:
     }
     if rl.IsKeyPressed(.ESCAPE) && g.state != .World && g.state != .Interior &&
        g.state != .HomeInterior && g.state != .GarageInterior && g.state != .MainMenu && g.state != .HelpMenu {
@@ -8821,10 +8782,10 @@ draw_menu_flower :: proc(x, y: f32, seed: int) {
     col    := petal_colors[seed % 10]
     cencol := center_colors[seed % 5]
     ix := pxi(x); iy := pxi(y)
-    // Stem
+
     rl.DrawRectangle(ix,   iy,   2, 12, {40, 140, 40, 255})
     rl.DrawRectangle(ix+1, iy+2, 2,  6, {60, 180, 60, 255})
-    // Petals
+
     rl.DrawRectangle(ix-4, iy-8,  4, 4, col)
     rl.DrawRectangle(ix+3, iy-8,  4, 4, col)
     rl.DrawRectangle(ix-1, iy-12, 4, 4, col)
@@ -8833,7 +8794,7 @@ draw_menu_flower :: proc(x, y: f32, seed: int) {
     rl.DrawRectangle(ix+3, iy-12, 3, 3, rl.Color{col.r/2+40, col.g/2+40, col.b/2+40, 220})
     rl.DrawRectangle(ix-4, iy-5,  3, 3, rl.Color{col.r/2+40, col.g/2+40, col.b/2+40, 220})
     rl.DrawRectangle(ix+3, iy-5,  3, 3, rl.Color{col.r/2+40, col.g/2+40, col.b/2+40, 220})
-    // Center
+
     rl.DrawRectangle(ix-1, iy-10, 4, 4, cencol)
     rl.DrawRectangle(ix,   iy-9,  2, 2, {255, 255, 255, 200})
 }
@@ -9824,7 +9785,6 @@ draw_building :: proc(b: Building) {
     rx := pxi(r.x);     ry := pxi(r.y)
     rw := pxi(r.width); rh := pxi(r.height)
 
-    // Shadow
     rl.DrawRectangle(rx+4, ry+4, rw, rh, COL_SHADOW)
 
     if b.kind == .CarDealership {
@@ -9854,7 +9814,6 @@ draw_building :: proc(b: Building) {
         rl.DrawRectangle(ti+7, ry-10, 1, 12, COL_ROOF2)
     }
 
-    // Chimney + smoke
     rl.DrawRectangle(rx+rw-28, ry-26, 14, 20, COL_CHIMNEY)
     rl.DrawRectangle(rx+rw-30, ry-28, 18,  4, COL_CHIMNEY)
     t := f32(rl.GetTime())
@@ -9865,7 +9824,6 @@ draw_building :: proc(b: Building) {
         rl.DrawCircle(sx, sy, f32(4-i32(si)), {200,200,200,u8(80-si*20)})
     }
 
-    // Windows
     win_col  := rl.Color{160,210,240,220}
     win_col2 := rl.Color{120,170,200,180}
     for wi in 0..<2 {
@@ -9878,7 +9836,6 @@ draw_building :: proc(b: Building) {
         rl.DrawRectangle(wx-1, wy+16, 22,  3, COL_SIDEWALK)
     }
 
-    // Door
     door_x := rx + rw/2 - 8
     door_y := ry + rh - 28
     rl.DrawRectangle(door_x,    door_y,    16, 28, {56,36,16,255})
@@ -9889,11 +9846,9 @@ draw_building :: proc(b: Building) {
     rl.DrawRectangle(door_x-3,  door_y+26, 22,  4, COL_SIDEWALK)
     rl.DrawRectangle(door_x+2,  door_y+30, 12, 40, COL_PATH)
 
-    // Lamp posts
     draw_lamp_post(rx-14,   ry+rh-10)
     draw_lamp_post(rx+rw+6, ry+rh-10)
 
-    // Per-building unique details
     #partial switch b.kind {
     case .Market:
         for ai := 0; ai < 7; ai += 1 {
@@ -9980,16 +9935,12 @@ draw_building :: proc(b: Building) {
 
 draw_pixel_car :: proc(x, y: f32, col: rl.Color) {
     ix := pxi(x); iy := pxi(y)
-    // Body
     rl.DrawRectangle(ix,      iy - 10, 60, 14, col)
-    // Roof
     rl.DrawRectangle(ix + 10, iy - 20, 36, 12, col)
-    // Wheels
     rl.DrawCircle(ix + 12, iy + 4, 7, {30, 30, 30, 255})
     rl.DrawCircle(ix + 48, iy + 4, 7, {30, 30, 30, 255})
     rl.DrawCircle(ix + 12, iy + 4, 3, {180, 180, 180, 255})
     rl.DrawCircle(ix + 48, iy + 4, 3, {180, 180, 180, 255})
-    // Windows
     rl.DrawRectangle(ix + 12, iy - 18, 14, 9, {160, 210, 240, 200})
     rl.DrawRectangle(ix + 30, iy - 18, 14, 9, {160, 210, 240, 200})
 }
@@ -10120,12 +10071,10 @@ int16_light :: proc(
     active: bool,
     bright, dim: rl.Color,
 ) {
-    // Dark square fixture.
     rl.DrawRectangle(x-5, y-3, 11, 7, {18, 19, 24, 255})
     rl.DrawRectangle(x-4, y-2, 9, 5, dim)
 
     if active {
-        // Square pixel glow.
         rl.DrawRectangle(
             x-7,
             y-1,
@@ -10155,12 +10104,9 @@ int16_sign :: proc(
     background, foreground: rl.Color,
     t, phase: f32,
 ) {
-    // Pixel-stepped frame.
     rl.DrawRectangle(x-3, y+2, w+6, h-4, {23, 24, 29, 255})
     rl.DrawRectangle(x-1, y, w+2, h, {79, 84, 90, 255})
     rl.DrawRectangle(x, y+1, w, h-2, background)
-
-    // Animated vertical shine.
     shine_range := f32(w+12)
     shine_x := i32(math.mod(t*18.0+phase, shine_range))-6
 
@@ -10218,16 +10164,13 @@ int16_floor :: proc(
 int16_plant :: proc(x, y: i32, t, phase: f32) {
     sway := i32(math.sin(t*1.5+phase)*2.0)
 
-    // Terracotta pot.
     rl.DrawRectangle(x-8, y-12, 17, 4, {82, 46, 31, 255})
     rl.DrawRectangle(x-6, y-8, 13, 9, {159, 82, 51, 255})
     rl.DrawRectangle(x-5, y-7, 11, 2, {200, 108, 65, 255})
     rl.DrawRectangle(x-4, y-2, 9, 3, {110, 57, 38, 255})
 
-    // Stem.
     rl.DrawRectangle(x, y-29, 2, 18, {38, 104, 49, 255})
 
-    // Chunky leaves.
     rl.DrawRectangle(x-10+sway, y-28, 10, 6, {46, 139, 58, 255})
     rl.DrawRectangle(x-7+sway, y-32, 7, 6, {71, 172, 78, 255})
 
@@ -10244,13 +10187,10 @@ int16_produce_crate :: proc(
     produce_col: rl.Color,
     t, phase: f32,
 ) {
-    // Wooden crate.
     rl.DrawRectangle(x-2, y-2, 65, 30, {48, 31, 21, 255})
     rl.DrawRectangle(x, y, 61, 26, {150, 94, 46, 255})
     rl.DrawRectangle(x+3, y+4, 55, 17, {91, 58, 32, 255})
     rl.DrawRectangle(x+2, y+20, 57, 4, {193, 127, 65, 255})
-
-    // Seven pieces of animated produce.
     for item: i32 = 0; item < 7; item += 1 {
         item_x := x+5+item*8
         item_y := y+6+(item%2)*6
@@ -10292,18 +10232,15 @@ int16_takeout_bag :: proc(
     x, y: i32,
     bag_col, logo_col: rl.Color,
 ) {
-    // Handles.
     rl.DrawRectangle(x+3, y-5, 2, 6, {76, 50, 29, 255})
     rl.DrawRectangle(x+10, y-5, 2, 6, {76, 50, 29, 255})
     rl.DrawRectangle(x+4, y-6, 7, 2, {76, 50, 29, 255})
 
-    // Bag outline and body.
     rl.DrawRectangle(x-1, y-1, 17, 18, {38, 29, 22, 255})
     rl.DrawRectangle(x, y, 15, 16, bag_col)
     rl.DrawRectangle(x+1, y+1, 13, 2, {238, 207, 147, 255})
     rl.DrawRectangle(x+2, y+14, 11, 1, {145, 104, 60, 255})
 
-    // Cute pixel restaurant logo.
     rl.DrawRectangle(x+5, y+6, 6, 6, logo_col)
     rl.DrawRectangle(x+6, y+5, 4, 8, logo_col)
     rl.DrawRectangle(x+7, y+7, 2, 4, {255, 221, 126, 255})
@@ -10387,7 +10324,6 @@ int16_security_camera :: proc(
     face_right: bool,
     active: bool,
 ) {
-    // Wall mount.
     rl.DrawRectangle(x-2, y-2, 5, 12, {49, 54, 58, 255})
 
     body_x := x+7
@@ -10464,22 +10400,18 @@ int16_hospital_bed :: proc(
     x, y: i32,
     blanket: rl.Color,
 ) {
-    // Supports and wheels.
     rl.DrawRectangle(x+7, y+16, 3, 9, {72, 81, 88, 255})
     rl.DrawRectangle(x+53, y+16, 3, 9, {72, 81, 88, 255})
     rl.DrawCircle(x+8, y+26, 3, {27, 29, 32, 255})
     rl.DrawCircle(x+54, y+26, 3, {27, 29, 32, 255})
 
-    // Metal frame.
     rl.DrawRectangle(x-2, y+13, 65, 6, {68, 78, 85, 255})
 
-    // Mattress, blanket and pillow.
     rl.DrawRectangle(x, y+6, 60, 9, {223, 232, 231, 255})
     rl.DrawRectangle(x+17, y+8, 40, 7, blanket)
     rl.DrawRectangle(x+3, y+4, 15, 8, {244, 244, 236, 255})
     rl.DrawRectangle(x+5, y+5, 11, 2, rl.WHITE)
 
-    // Bed rails.
     rl.DrawRectangle(x-3, y, 4, 20, {105, 125, 134, 255})
     rl.DrawRectangle(x+60, y+3, 4, 17, {105, 125, 134, 255})
 }
@@ -10488,7 +10420,6 @@ int16_draw_market :: proc(x, y, w, h: i32, t: f32) {
     green  := rl.Color{51, 142, 65, 255}
     yellow := rl.Color{255, 218, 69, 255}
 
-    // Wooden wall slats.
     for slat_y: i32 = y+4; slat_y < y+55; slat_y += 9 {
         rl.DrawRectangle(x+5, slat_y, w-10, 7, {120, 78, 43, 255})
         rl.DrawRectangle(x+5, slat_y, w-10, 1, {175, 119, 64, 255})
@@ -10523,7 +10454,6 @@ int16_draw_market :: proc(x, y, w, h: i32, t: f32) {
         {83, 68, 24, 255},
     )
 
-    // Warm pendant lights.
     for lamp: i32 = 0; lamp < 4; lamp += 1 {
         lamp_x := x+33+lamp*78
         lamp_on := (i32(t*3.0)+lamp)%7 != 0
@@ -10538,7 +10468,6 @@ int16_draw_market :: proc(x, y, w, h: i32, t: f32) {
         )
     }
 
-    // Two rows of colorful fresh produce.
     int16_produce_crate(x+13,  y+42, {224, 58, 45, 255}, t, 0.0)
     int16_produce_crate(x+83,  y+42, {239, 179, 38, 255}, t, 1.0)
     int16_produce_crate(x+153, y+42, {77, 183, 70, 255}, t, 2.0)
@@ -10548,7 +10477,6 @@ int16_draw_market :: proc(x, y, w, h: i32, t: f32) {
     int16_produce_crate(x+94,  y+78, {223, 91, 45, 255}, t, 5.0)
     int16_produce_crate(x+164, y+78, {91, 197, 88, 255}, t, 6.0)
 
-    // Animated cooling mist.
     for mist: i32 = 0; mist < 8; mist += 1 {
         mist_x := x+18+mist*36
         rise := i32(math.mod(t*11.0+f32(mist)*7.0, 24.0))
@@ -10563,12 +10491,10 @@ int16_draw_market :: proc(x, y, w, h: i32, t: f32) {
         )
     }
 
-    // Checkout counter.
     rl.DrawRectangle(x+13, y+122, w-26, 25, {61, 39, 27, 255})
     rl.DrawRectangle(x+16, y+125, w-32, 20, {150, 89, 45, 255})
     rl.DrawRectangle(x+10, y+119, w-20, 7, {196, 130, 66, 255})
 
-    // Register.
     register_on := math.mod(t, 1.2) < 0.8
 
     rl.DrawRectangle(x+w-55, y+104, 31, 17, {44, 47, 48, 255})
@@ -10598,7 +10524,6 @@ int16_draw_carryout :: proc(x, y, w, h: i32, t: f32) {
     amber := rl.Color{255, 190, 53, 255}
     green := rl.Color{67, 255, 108, 255}
 
-    // Cream kitchen tiles.
     for row: i32 = 0; row < 7; row += 1 {
         for col: i32 = 0; col < 20; col += 1 {
             tile_x := x+col*16
@@ -10654,7 +10579,6 @@ int16_draw_carryout :: proc(x, y, w, h: i32, t: f32) {
         {94, 59, 20, 255},
     )
 
-    // Kitchen pass-through window.
     rl.DrawRectangle(x+9, y+35, 121, 58, {31, 32, 35, 255})
     rl.DrawRectangle(x+13, y+39, 113, 49, {102, 108, 109, 255})
 
@@ -10682,7 +10606,6 @@ int16_draw_carryout :: proc(x, y, w, h: i32, t: f32) {
     rl.DrawRectangle(x+8, y+84, 122, 8, {49, 52, 54, 255})
     rl.DrawRectangle(x+10, y+84, 118, 2, {210, 215, 212, 255})
 
-    // Order status board.
     board_x := x+143
     board_y := y+36
     board_w: i32 = 144
@@ -10745,7 +10668,6 @@ int16_draw_carryout :: proc(x, y, w, h: i32, t: f32) {
         }
     }
 
-    // Moving kitchen conveyor.
     conveyor_y := y+100
 
     rl.DrawRectangle(x+14, conveyor_y, w-28, 8, {35, 38, 41, 255})
@@ -10775,7 +10697,6 @@ int16_draw_carryout :: proc(x, y, w, h: i32, t: f32) {
         red,
     )
 
-    // Long pickup counter.
     counter_y := y+125
 
     rl.DrawRectangle(x+10, counter_y, w-20, 27, {62, 30, 28, 255})
@@ -10819,7 +10740,6 @@ int16_draw_nightclub :: proc(x, y, w, h: i32, t: f32) {
     violet := rl.Color{139, 64, 255, 255}
     lime   := rl.Color{82, 255, 135, 255}
 
-    // Dark padded wall.
     for panel_x: i32 = x+4; panel_x < x+w-4; panel_x += 24 {
         rl.DrawRectangle(panel_x, y+4, 22, 57, {31, 23, 49, 255})
         rl.DrawRectangle(panel_x+2, y+6, 18, 2, {55, 38, 78, 255})
@@ -10847,7 +10767,6 @@ int16_draw_nightclub :: proc(x, y, w, h: i32, t: f32) {
         20,
     )
 
-    // Disco ball.
     disco_x := x+w/2
     disco_y := y+44
 
@@ -10882,7 +10801,6 @@ int16_draw_nightclub :: proc(x, y, w, h: i32, t: f32) {
         }
     }
 
-    // Animated ceiling chase lights.
     chase := i32(t*8.0)%10
 
     for light: i32 = 0; light < 10; light += 1 {
@@ -10903,7 +10821,6 @@ int16_draw_nightclub :: proc(x, y, w, h: i32, t: f32) {
         )
     }
 
-    // Sweeping laser spotlights.
     beam_a := i32(math.sin(t*1.6)*105.0)
     beam_b := i32(math.sin(t*1.3+2.0)*105.0)
 
@@ -14741,7 +14658,9 @@ main :: proc() {
 	    update_market_menu()
         case:
             update_camera()
-            update_npcs()
+	    if net_state.role != .Client {
+		update_npcs()
+	    }
 	    update_market_menu()
             update_environment()
             update_bee_boxes()

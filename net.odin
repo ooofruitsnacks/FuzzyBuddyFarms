@@ -113,11 +113,20 @@ Net_Building :: struct {
     owned: bool,
 }
 
+Net_NPC :: struct {
+    pos:      [2]f32,
+    facing:   f32,
+    state:    u8,
+    in_building: bool,
+}
+
 World_Snapshot_Header :: struct {
     day_time:       f32,
     is_night:       bool,
     season_time:    f32,
     season:         Season,
+    rain_timer:     f32,
+    rain_cooldown:  f32,
     plot_count:     int,
     beebox_count:   int,
     building_count: int,
@@ -204,6 +213,7 @@ Net_State :: struct {
     game_started:        bool,
     start_announce_left: f32,
     start_announce_tick: f32,
+    world_sync_timer:    f32,
 
     passphrase:        [NET_PASSPHRASE_LEN]u8,
     passphrase_len:    int,
@@ -337,6 +347,8 @@ net_client_connect :: proc(host_ip: string, port: int = NET_PORT_DEFAULT, passph
 }
 
 net_client_begin_session :: proc() {
+    init_game()
+
     g.player.health = PLAYER_STAT_MAX
     g.player.hunger = PLAYER_STAT_MAX
     g.player.thirst = PLAYER_STAT_MAX
@@ -351,10 +363,13 @@ net_client_begin_session :: proc() {
     }
     g.player.pos    = net_spawn_pos(idx)
     g.camera.target = g.player.pos
+    g.camera.offset = {GAME_W/2, GAME_H/2}
+    g.camera.zoom   = 1.0
 
     g.state = .World
     show_message("Joined the game!", 3)
 }
+
 
 net_shutdown :: proc() {
     if net_state.role == .None { return }
@@ -428,6 +443,15 @@ net_update :: proc() {
             net_broadcast(pkt)
         }
     }
+
+    if net_state.role == .Host {
+        net_state.world_sync_timer -= g.dt
+        if net_state.world_sync_timer <= 0 {
+            net_state.world_sync_timer = 2.0
+            net_broadcast_world_snapshot()
+        }
+    }
+
 
     now := f32(rl.GetTime())
     for i in 0..<NET_MAX_PLAYERS {
@@ -554,6 +578,8 @@ net_start_game :: proc() {
 
     g.player.pos    = net_spawn_pos(0)
     g.camera.target = g.player.pos
+    g.camera.offset = {GAME_W/2, GAME_H/2}
+    g.camera.zoom   = 1.0
     g.state = .World
 }
 
@@ -567,9 +593,17 @@ animal_buddy_kind_is_valid :: proc(p: AnimalBuddyType) -> bool {
     return int(p) >= 0 && int(p) < len(AnimalBuddyType)
 }
 
+
 net_store_remote :: proc(snap: Net_Player_Snapshot) {
     if snap.id == net_state.local_id { return }
     if snap.id == NET_ID_UNASSIGNED { return }
+
+    snap := snap
+    if snap.shirt_color.a == 0 { snap.shirt_color = CUSTOMIZE_PALETTE[5]  }
+    if snap.pants_color.a == 0 { snap.pants_color = CUSTOMIZE_PALETTE[6]  }
+    if snap.hat_color.a   == 0 { snap.hat_color   = CUSTOMIZE_PALETTE[8]  }
+    if snap.skin_color.a  == 0 { snap.skin_color  = SKIN_PALETTE[0]       }
+    if snap.pattern_color.a == 0 { snap.pattern_color = CUSTOMIZE_PALETTE[10] }
 
     for i in 0..<NET_MAX_PLAYERS {
         r := &net_state.remotes[i]
@@ -669,7 +703,9 @@ net_send_world_snapshot :: proc(to: net.Endpoint) {
     }
 
     header := World_Snapshot_Header{
-        day_time = g.day_time, is_night = g.is_night, season_time = g.season_time, season = g.season,
+        day_time = g.day_time, is_night = g.is_night,
+        season_time = g.season_time, season = g.season,
+        rain_timer = g.rain_timer, rain_cooldown = g.rain_cooldown,
         plot_count = plot_count, beebox_count = beebox_count, building_count = building_count,
     }
     start := WorldSync_Start_Packet{kind = .WorldSyncStart, proto_ver = NET_PROTOCOL_VERSION,
@@ -799,10 +835,17 @@ net_on_world_sync_end :: proc() {
             append(&g.plots[op].boxes, i)
         }
     }
+    old_season := g.season
+    g.day_time     = h.day_time
+    g.is_night     = h.is_night
+    g.season_time  = h.season_time
+    g.season       = h.season
+    g.rain_timer    = h.rain_timer
+    g.rain_cooldown = h.rain_cooldown
 
-    g.day_time = h.day_time; g.is_night = h.is_night
-    g.season_time = h.season_time; g.season = h.season
-    show_message("World synced!", 2)
+    if old_season != g.season {
+        show_message("The season has changed!", 5)
+    }
 }
 
 net_request_plot_action :: proc(plot_index: int, action: PlotActionType, pos: Vec2, box_kind: BoxType = .SmallGround) {
