@@ -148,13 +148,7 @@ cd FuzzyBuddyFarms
 git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
 ```
 
-Once the game has downloaded, you can build an executable version to launch as an "app". This way you don't have to open a terminal and type a command every time you want to launch the game.
-
-```
-cd FuzzyBuddyFarms
-```
-
-Then run this command to build an executable. This will not build unless you have Odin installed as I mentioned earlier.
+Once the game has downloaded, you can build an executable version to launch as an "app". This way you don't have to open a terminal and type a command every time you want to launch the game. Run this command to build an executable. This will not build unless you have Odin installed as I mentioned earlier.
 
 ```
 odin build . -out:FUZZYBUDDYFARMS -o:speed && odin build . -out:FUZZYBUDDYFARMS -o:speed -extra-linker-flags:"-rpath @executable_path"
@@ -163,7 +157,6 @@ odin build . -out:FUZZYBUDDYFARMS -o:speed && odin build . -out:FUZZYBUDDYFARMS 
 Now you can either double click the icon and it will execute as a normal "app" would or you can launch it from the command line with this:
 
 ```
-cd FuzzyBuddyFarms
 ./Fuzzy_Buddy_Farms
 ```
 
@@ -173,7 +166,7 @@ Please ensure you have ```MSVC``` compiler installed and ```Windows SDK```.
 
 Download the ```Visual Studio Installer``` then select the workload titled ```Desktop development with C++```
 
-__DONWLOAD ODIN__
+__DOWNLOAD ODIN__
 
 Once you have MSVC and SDK installed, install Odin either with a package manager:
 
@@ -281,6 +274,8 @@ Or make it executable from your file manager by right-clicking it → Properties
 
 __Fedora Distros__
 
+work in progress
+
 dnf install clang
 
 ## Linux (arm64/aarch64)
@@ -361,6 +356,21 @@ If it fails to run, install the runtime counterparts and then try again:
 
 ```
 sudo apt install -y libx11-6 libxrandr2 libxinerama1 libxcursor1 libxi6 libgl1 libasound2t64
+```
+
+Alternatively if that doesn't work try:
+
+```
+MESA_GL_VERSION_OVERRIDE=3.3 ./Fuzzy_Buddy_Farms
+```
+
+or 
+
+>[!WARNING]
+>THIS METHOD IS VERY SLOW AND BUGGY BUT IT CAN BE USED TO CONFIRM YOU HAVE EVERYTHING INSTALLED PROPERLY TO RUN THE GAME
+
+```
+LIBGL_ALWAYS_SOFTWARE=1 ./Fuzzy_Buddy_Farms
 ```
 
 # License
