@@ -2,6 +2,7 @@ package main
 
 import "core:net"
 import "core:fmt"
+import "core:math"
 import "core:strings"
 import rl "vendor:raylib"
 
@@ -20,6 +21,9 @@ NET_MAX_PACKETS_PER_SEC  :: 40
 NET_ADDRESS_LEN     :: 24
 NET_CHUNK_DATA_SIZE :: 400
 NET_ACTION_MSG_LEN  :: 64
+NET_ID_UNASSIGNED :: u32(0xFFFF_FFFF)
+NET_START_ANNOUNCE_SECONDS :: f32(3.0)
+NET_START_ANNOUNCE_RATE    :: f32(0.25)
 
 Net_Role :: enum { None, Host, Client }
 
@@ -192,10 +196,14 @@ Net_State :: struct {
     host_ep:           net.Endpoint,
     client_eps:        [NET_MAX_PLAYERS]net.Endpoint,
     client_active:     [NET_MAX_PLAYERS]bool,
+    client_ids:        [NET_MAX_PLAYERS]u32,
     local_id:          u32,
     next_id:           u32,
     remotes:           [NET_MAX_PLAYERS]Remote_Player,
     send_timer:        f32,
+    game_started:        bool,
+    start_announce_left: f32,
+    start_announce_tick: f32,
 
     passphrase:        [NET_PASSPHRASE_LEN]u8,
     passphrase_len:    int,
@@ -267,6 +275,13 @@ player_rate_limited :: proc(slot: int) -> bool {
     return net_state.rate_count[slot] > NET_MAX_PACKETS_PER_SEC
 }
 
+net_spawn_pos :: proc(player_index: int) -> Vec2 {
+    base := Vec2{0, 560}
+    if player_index <= 0 { return base }
+    ang := f32(player_index) * 1.2566
+    return base + Vec2{math.cos(ang) * 28, math.sin(ang) * 28}
+}
+
 net_host_start :: proc(port: int = NET_PORT_DEFAULT, passphrase: string = "") -> bool {
     addr := net.parse_address("0.0.0.0")
     if addr == nil { return false }
@@ -278,7 +293,7 @@ net_host_start :: proc(port: int = NET_PORT_DEFAULT, passphrase: string = "") ->
     net.set_blocking(sock, false)
 
     net_state = Net_State{}
-    net_state.role     = .Host
+    net_state.role      = .Host
     net_state.socket    = sock
     net_state.local_id  = 0
     net_state.next_id   = 1
@@ -307,9 +322,10 @@ net_client_connect :: proc(host_ip: string, port: int = NET_PORT_DEFAULT, passph
     }
 
     net_state = Net_State{}
-    net_state.role    = .Client
+    net_state.role     = .Client
     net_state.socket   = sock
     net_state.host_ep  = net.Endpoint{address = addr, port = port}
+    net_state.local_id = NET_ID_UNASSIGNED
 
     join_pkt := Packet{kind = .Join, proto_ver = NET_PROTOCOL_VERSION}
     join_pkt.passphrase_len = set_passphrase(&join_pkt.passphrase, passphrase)
@@ -318,6 +334,26 @@ net_client_connect :: proc(host_ip: string, port: int = NET_PORT_DEFAULT, passph
 
     show_message("Connecting to host...", 3)
     return true
+}
+
+net_client_begin_session :: proc() {
+    g.player.health = PLAYER_STAT_MAX
+    g.player.hunger = PLAYER_STAT_MAX
+    g.player.thirst = PLAYER_STAT_MAX
+
+    g.death_active     = false
+    g.death_timer      = 0
+    g.starvation_timer = 0
+
+    idx := 0
+    if net_state.local_id != NET_ID_UNASSIGNED {
+        idx = int(net_state.local_id)
+    }
+    g.player.pos    = net_spawn_pos(idx)
+    g.camera.target = g.player.pos
+
+    g.state = .World
+    show_message("Joined the game!", 3)
 }
 
 net_shutdown :: proc() {
@@ -330,7 +366,6 @@ net_shutdown :: proc() {
     world_sync_buf = World_Sync_Buffer{}
     net_state = Net_State{}
     friend_follow_end()
-
 }
 
 net_update :: proc() {
@@ -384,6 +419,16 @@ net_update :: proc() {
         net_send_my_state()
     }
 
+    if net_state.role == .Host && net_state.start_announce_left > 0 {
+        net_state.start_announce_left -= g.dt
+        net_state.start_announce_tick -= g.dt
+        if net_state.start_announce_tick <= 0 {
+            net_state.start_announce_tick = NET_START_ANNOUNCE_RATE
+            pkt := Packet{kind = .StartGame, proto_ver = NET_PROTOCOL_VERSION}
+            net_broadcast(pkt)
+        }
+    }
+
     now := f32(rl.GetTime())
     for i in 0..<NET_MAX_PLAYERS {
         r := &net_state.remotes[i]
@@ -402,12 +447,6 @@ net_handle_packet :: proc(pkt: Packet, from: net.Endpoint) {
     }
 
     switch pkt.kind {
-    case .StartGame:
-        if net_state.role == .Client {
-            g.state = .World
-            show_message("The host started the game!", 3)
-        }
-
     case .Join:
         if net_state.role != .Host { return }
         if !join_attempt_allowed(from) { return }
@@ -420,13 +459,31 @@ net_handle_packet :: proc(pkt: Packet, from: net.Endpoint) {
         }
 
         for i in 0..<NET_MAX_PLAYERS {
+            if net_state.client_active[i] && net_state.client_eps[i] == from {
+                welcome := Packet{kind = .Welcome, proto_ver = NET_PROTOCOL_VERSION,
+                    player = Net_Player_Snapshot{id = net_state.client_ids[i]}}
+                wbuf := transmute([size_of(Packet)]u8)welcome
+                net.send_udp(net_state.socket, wbuf[:], from)
+                net_send_world_snapshot(from)
+                if net_state.game_started {
+                    spkt := Packet{kind = .StartGame, proto_ver = NET_PROTOCOL_VERSION}
+                    sbuf := transmute([size_of(Packet)]u8)spkt
+                    net.send_udp(net_state.socket, sbuf[:], from)
+                }
+                return
+            }
+        }
+
+        for i in 0..<NET_MAX_PLAYERS {
             if !net_state.client_active[i] {
-                net_state.client_active[i]     = true
-                net_state.client_eps[i]        = from
-                net_state.rate_window_start[i] = f32(rl.GetTime())
-                net_state.rate_count[i]        = 0
                 assigned_id := net_state.next_id
                 net_state.next_id += 1
+
+                net_state.client_active[i]     = true
+                net_state.client_eps[i]        = from
+                net_state.client_ids[i]        = assigned_id
+                net_state.rate_window_start[i] = f32(rl.GetTime())
+                net_state.rate_count[i]        = 0
 
                 welcome := Packet{kind = .Welcome, proto_ver = NET_PROTOCOL_VERSION,
                     player = Net_Player_Snapshot{id = assigned_id}}
@@ -434,6 +491,12 @@ net_handle_packet :: proc(pkt: Packet, from: net.Endpoint) {
                 net.send_udp(net_state.socket, wbuf[:], from)
 
                 net_send_world_snapshot(from)
+
+                if net_state.game_started {
+                    spkt := Packet{kind = .StartGame, proto_ver = NET_PROTOCOL_VERSION}
+                    sbuf := transmute([size_of(Packet)]u8)spkt
+                    net.send_udp(net_state.socket, sbuf[:], from)
+                }
 
                 show_message("A farmer has joined Honeyville!", 4)
                 return
@@ -443,6 +506,14 @@ net_handle_packet :: proc(pkt: Packet, from: net.Endpoint) {
     case .Welcome:
         if net_state.role != .Client { return }
         net_state.local_id = pkt.player.id
+
+    case .StartGame:
+        // Only act while still sitting in the lobby, so a late or
+        // duplicate announcement can't teleport an in-game client
+        // back to spawn.
+        if net_state.role == .Client && g.state == .MultiplayerLobby {
+            net_client_begin_session()
+        }
 
     case .PlayerState:
         net_store_remote(pkt.player)
@@ -476,8 +547,16 @@ net_handle_packet :: proc(pkt: Packet, from: net.Endpoint) {
 net_start_game :: proc() {
     pkt := Packet{kind = .StartGame, proto_ver = NET_PROTOCOL_VERSION}
     net_broadcast(pkt)
+
+    net_state.game_started        = true
+    net_state.start_announce_left = NET_START_ANNOUNCE_SECONDS
+    net_state.start_announce_tick = NET_START_ANNOUNCE_RATE
+
+    g.player.pos    = net_spawn_pos(0)
+    g.camera.target = g.player.pos
     g.state = .World
 }
+
 clothing_pattern_is_valid :: proc(p: ClothingPattern) -> bool {
     return int(p) >= 0 && int(p) < len(ClothingPattern)
 }
@@ -490,6 +569,7 @@ animal_buddy_kind_is_valid :: proc(p: AnimalBuddyType) -> bool {
 
 net_store_remote :: proc(snap: Net_Player_Snapshot) {
     if snap.id == net_state.local_id { return }
+    if snap.id == NET_ID_UNASSIGNED { return }
 
     for i in 0..<NET_MAX_PLAYERS {
         r := &net_state.remotes[i]
@@ -512,6 +592,10 @@ net_store_remote :: proc(snap: Net_Player_Snapshot) {
 }
 
 net_send_my_state :: proc() {
+    if net_state.role == .Client && net_state.local_id == NET_ID_UNASSIGNED {
+        return
+    }
+
     snap := Net_Player_Snapshot{
         id               = net_state.local_id,
         pos              = {g.player.pos.x, g.player.pos.y},
@@ -547,7 +631,6 @@ net_broadcast :: proc(pkt: Packet) {
         }
     }
 }
-
 
 net_send_world_snapshot :: proc(to: net.Endpoint) {
     plot_count     := len(g.plots)
@@ -646,11 +729,16 @@ net_on_world_sync_end :: proc() {
     off := 0
 
     for i in 0..<h.plot_count {
+        if i >= len(g.plots) { break }
         if off + size_of(Net_Plot) > len(world_sync_buf.data) { return }
         raw: [size_of(Net_Plot)]u8
         copy(raw[:], world_sync_buf.data[off:off+size_of(Net_Plot)])
         np := transmute(Net_Plot)raw
         off += size_of(Net_Plot)
+
+        alen := np.address_len
+        if alen < 0 { alen = 0 }
+        if alen > NET_ADDRESS_LEN { alen = NET_ADDRESS_LEN }
 
         g.plots[i].rect            = rl.Rectangle{np.rect[0], np.rect[1], np.rect[2], np.rect[3]}
         g.plots[i].size            = np.size
@@ -658,24 +746,34 @@ net_on_world_sync_end :: proc() {
         g.plots[i].owned           = np.owned
         g.plots[i].owner_is_player = np.owner_is_player
         delete(g.plots[i].address)
-        g.plots[i].address         = strings.clone(string(np.address[:np.address_len]))
+        g.plots[i].address         = strings.clone(string(np.address[:alen]))
 
+        tc := np.tree_count
+        if tc < 0 { tc = 0 }
+        if tc > 4096 { tc = 4096 }
         clear(&g.plots[i].trees)
-        for t in 0..<np.tree_count {
+        for t in 0..<tc {
             append(&g.plots[i].trees, Vec2{np.rect[0]+f32(t%4)*20+10, np.rect[1]+f32(t/4)*20+10})
         }
+
+        fc := np.flower_count
+        if fc < 0 { fc = 0 }
+        if fc > 4096 { fc = 4096 }
         clear(&g.plots[i].flowers)
-        for f in 0..<np.flower_count {
+        for f in 0..<fc {
             append(&g.plots[i].flowers, Vec2{np.rect[0]+f32(f%5)*16+8, np.rect[1]+f32(f/5)*16+8})
         }
     }
 
     for i in 0..<h.beebox_count {
+        if i >= len(g.bee_boxes) { break }
         if off + size_of(Net_BeeBox) > len(world_sync_buf.data) { return }
         raw: [size_of(Net_BeeBox)]u8
         copy(raw[:], world_sync_buf.data[off:off+size_of(Net_BeeBox)])
         nb := transmute(Net_BeeBox)raw
         off += size_of(Net_BeeBox)
+
+        if !box_kind_is_valid(nb.kind) { continue }
 
         g.bee_boxes[i].pos = Vec2{nb.pos[0], nb.pos[1]}
         g.bee_boxes[i].kind = nb.kind; g.bee_boxes[i].honey_ml = nb.honey_ml
@@ -690,6 +788,7 @@ net_on_world_sync_end :: proc() {
         copy(raw[:], world_sync_buf.data[off:off+size_of(Net_Building)])
         nbld := transmute(Net_Building)raw
         off += size_of(Net_Building)
+        if int(nbld.kind) < 0 || int(nbld.kind) >= len(BuildingType) { continue }
         g.buildings[nbld.kind].owned = nbld.owned
     }
 

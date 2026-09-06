@@ -3449,6 +3449,14 @@ consume_drink :: proc() {
 }
 
 update_player_needs :: proc() {
+    if !g.death_active &&
+       g.player.health <= 0 && g.player.hunger <= 0 && g.player.thirst <= 0 {
+        g.player.health = PLAYER_STAT_MAX
+        g.player.hunger = PLAYER_STAT_MAX
+        g.player.thirst = PLAYER_STAT_MAX
+        return
+    }
+
     dt := g.dt
 
     if g.death_active {
