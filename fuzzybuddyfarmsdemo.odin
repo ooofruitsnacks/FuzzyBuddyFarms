@@ -1,4 +1,4 @@
-// FuzzyBuddyFarms beta demo v.0.2.5
+// FuzzyBuddyFarms beta demo v.0.2.6
 // an open source game created by Owen Edwards | ACS "a creative solution"
 // for everyone to enjoy :) work in progress
 package main
@@ -49,7 +49,7 @@ MINIMAP_H     :: f32(90)
 MINIMAP_PAD   :: f32(4)
 MINIMAP_WORLD :: f32(5000)
 SAVE_MAGIC     :: u32(0xBEEF1234)
-SAVE_VERSION   :: u32(22)
+SAVE_VERSION   :: u32(23)
 NUM_SAVE_SLOTS :: 3
 ROAD_HALF  :: f32(36)
 DIRT_HALF  :: f32(20)
@@ -130,6 +130,7 @@ BEE_CAM_SPEED     :: f32(220)
 BEE_CAM_ZOOM      :: f32(3)
 PLAYER_ZOOM_NORMAL :: f32(1.0)
 PLAYER_ZOOM_CLOSE  :: f32(2.5)
+FRIEND_CAM_ZOOM :: f32(1.5)
 BEE_CAM_BOB_AMP   :: f32(3)
 BEE_CAM_BOB_FREQ  :: f32(10)
 PARK_X       :: f32(-1050)
@@ -254,10 +255,10 @@ PHONE_MARGIN     :: f32(8)
 PHONE_BORDER     :: f32(3)
 COL_PHONE_BORDER :: rl.Color{250, 210, 40, 255}
 COL_PHONE_SCREEN :: rl.Color{20, 20, 25, 255}
-PHONE_APP_COUNT  :: 8
+PHONE_APP_COUNT  :: 9
 PHONE_APP_NAMES := [PHONE_APP_COUNT]string{
     "Contacts", "Inventory", "Photo Album",
-    "Discovered", "Achievements", "Stats", "Help", "Buzzy Bee",
+    "Discovered", "Achievements", "Stats", "Help", "Buzzy Bee", "Find My Friends",
 }
 HELP_LINES := []string{
     "== KEYBINDS ==",
@@ -312,7 +313,7 @@ HELP_LINES := []string{
 }
 
 ACH_MONEY_10K         :: 0
-ACH_MONEY_50K         :: 1
+ACH_MONEY_100K         :: 1
 ACH_SOLD_NPC          :: 2
 ACH_SOLD_BANK         :: 3
 ACH_BOUGHT_PLOT       :: 4
@@ -326,7 +327,22 @@ ACH_DISCOVERED_ANIMAL :: 11
 ACH_DISCOVERED_FISH   :: 12
 ACH_SWAM_POND         :: 13
 ACH_RODE_CAR          :: 14
-ACHIEVEMENT_COUNT     :: 15
+ACH_FIRST_FRIEND      :: 15
+ACH_BEST_FRIEND       :: 16
+ACH_MET_EVERYONE      :: 17
+ACH_SOCIAL_BUTTERFLY  :: 18
+ACH_USED_PHONE        :: 19
+ACH_FOUND_FRIEND      :: 20
+ACH_BUZZY_BEE         :: 21
+ACH_ALL_ANIMALS       :: 22
+ACH_ALL_FISH          :: 23
+ACH_SHUTTERBUG        :: 24
+ACH_BECAME_BEE        :: 25
+ACH_NIGHT_OWL         :: 26
+ACH_LIGHTNING_BUGS    :: 27
+ACH_FARM_TYCOON       :: 28
+ACH_MILLIONAIRE       :: 29
+ACHIEVEMENT_COUNT     :: 30
 ACHIEVEMENT_NAMES := [ACHIEVEMENT_COUNT]string{
     "First $10,000 Earned",
     "First $100,000 Earned",
@@ -343,7 +359,23 @@ ACHIEVEMENT_NAMES := [ACHIEVEMENT_COUNT]string{
     "Discovered a Fish",
     "Went for a Swim",
     "Rode in a Car",
+    "Made Your First Friend",
+    "Best Friends Forever",
+    "Met the Whole Town",
+    "Social Butterfly",
+    "Answered the FuzzyPhone",
+    "Found a Friend",
+    "Buzzy Bee High Score",
+    "Wildlife Expert",
+    "Master Angler",
+    "Shutterbug",
+    "Bzzzt! Became a Bee",
+    "Night Owl",
+    "Lightning Bug Catcher",
+    "Honey Tycoon",
+    "RICH millionaire!",
 }
+
 RELATIONSHIP_MAX         :: f32(100)
 RELATIONSHIP_TALK_GAIN   :: f32(2)
 RELATIONSHIP_TRADE_GAIN  :: f32(5)
@@ -392,7 +424,7 @@ BUZZY_PIPE_W       :: f32(14)
 
 PlotSize :: enum { Small, Medium, Large, XLarge, XXLarge }
 BoxType  :: enum { SmallGround, LargeGround, TreeHang }
-PhoneScreen :: enum { Home, Contacts, ContactDetail, Help, BuzzyBee }
+PhoneScreen :: enum { Home, Contacts, ContactDetail, Help, BuzzyBee, FindFriends }
 BuildingType :: enum {
     Market, SheriffOffice, DoctorOffice, Bank, Diner, Bar, CarDealership, BeeSanctuary, FuzzyBuddyFactory, Garage, FarmersMarket,
 }
@@ -825,6 +857,11 @@ Game :: struct {
     npcs:               [NPC_COUNT]NPC,
     npc_met: [NPC_COUNT]bool,
     npc_relationship: [NPC_COUNT]f32,
+    friend_follow_active: bool,
+    friend_follow_cursor: int,
+    friend_follow_target: int,
+    friend_cam_prev_target:  Vec2,
+    friend_cam_prev_zoom:    f32,
     collision_rects:    [dynamic]CollisionRect,
     message:            string,
     message_timer:      f32,
@@ -1280,22 +1317,54 @@ unlock_achievement :: proc(id: int) {
 }
 
 check_passive_achievements :: proc() {
-    if g.player.money >= 10000 { unlock_achievement(ACH_MONEY_10K) }
-    if g.player.money >= 50000 { unlock_achievement(ACH_MONEY_50K) }
+    if g.player.money >= 10000    { unlock_achievement(ACH_MONEY_10K) }
+    if g.player.money >= 100000    { unlock_achievement(ACH_MONEY_100K) }
+    if g.player.money >= 250000   { unlock_achievement(ACH_FARM_TYCOON) }
+    if g.player.money >= 1000000  { unlock_achievement(ACH_MILLIONAIRE) }
+    if g.is_night { unlock_achievement(ACH_NIGHT_OWL) }
+    if g.lightning_bugs_caught >= 1 { unlock_achievement(ACH_LIGHTNING_BUGS) }
+    if g.buzzy.high_score >= 10 { unlock_achievement(ACH_BUZZY_BEE) }
 
-    if len(g.camera_roll) > 0 { unlock_achievement(ACH_FIRST_PHOTO) }
 
+
+
+    if len(g.camera_roll) > 0  { unlock_achievement(ACH_FIRST_PHOTO) }
+    if len(g.camera_roll) >= 10 { unlock_achievement(ACH_SHUTTERBUG) }
+
+    all_animals := true
     for discovered in g.discovered_animals {
-        if discovered { unlock_achievement(ACH_DISCOVERED_ANIMAL); break }
+        if discovered { unlock_achievement(ACH_DISCOVERED_ANIMAL) }
+        else          { all_animals = false }
     }
+    if all_animals { unlock_achievement(ACH_ALL_ANIMALS) }
+
+    all_fish := true
     for discovered in g.discovered_fish {
-        if discovered { unlock_achievement(ACH_DISCOVERED_FISH); break }
+        if discovered { unlock_achievement(ACH_DISCOVERED_FISH) }
+        else          { all_fish = false }
     }
+    if all_fish { unlock_achievement(ACH_ALL_FISH) }
 
     if g.player_in_water { unlock_achievement(ACH_SWAM_POND) }
     if g.in_car          { unlock_achievement(ACH_RODE_CAR) }
 
     if g.soccer.player_score >= 3 { unlock_achievement(ACH_WON_SOCCER) }
+
+    met_count    := 0
+    friend_count := 0
+    for i in 0..<NPC_COUNT {
+        if g.npc_met[i] { met_count += 1 }
+        if g.npc_relationship[i] >= RELATIONSHIP_MAX {
+            friend_count += 1
+            unlock_achievement(ACH_FIRST_FRIEND)
+        }
+    }
+    if met_count    >= NPC_COUNT { unlock_achievement(ACH_MET_EVERYONE) }
+    if friend_count >= 3         { unlock_achievement(ACH_BEST_FRIEND) }
+    if friend_count >= NPC_COUNT { unlock_achievement(ACH_SOCIAL_BUTTERFLY) }
+    if g.phone_open            { unlock_achievement(ACH_USED_PHONE) }
+    if g.friend_follow_active  { unlock_achievement(ACH_FOUND_FRIEND) }
+    if g.bee_cam_active { unlock_achievement(ACH_BECAME_BEE) }
 
     all_owned := true
     for h in g.homes {
@@ -1303,6 +1372,7 @@ check_passive_achievements :: proc() {
     }
     if all_owned { unlock_achievement(ACH_ALL_HOMES) }
 }
+
 update_achievements_toggle :: proc() {
     if g.save_rename_slot >= 0 { return }
     if rl.IsKeyPressed(.TWO) {
@@ -1377,6 +1447,12 @@ draw_achievements_menu :: proc() {
 }
 
 pxi :: proc(v: f32) -> i32 { return i32(v) }
+
+floor_div :: proc(a, b: i32) -> i32 {
+    q := a / b
+    if (a % b != 0) && ((a < 0) != (b < 0)) { q -= 1 }
+    return q
+}
 
 rect_expand :: proc(r: rl.Rectangle, amount: f32) -> rl.Rectangle {
     return {r.x - amount, r.y - amount, r.width + amount*2, r.height + amount*2}
@@ -1477,6 +1553,15 @@ apply_property_tax :: proc() {
 }
 npc_relationship_gain :: proc(idx: int, amount: f32) {
     g.npc_relationship[idx] = min(g.npc_relationship[idx] + amount, RELATIONSHIP_MAX)
+}
+get_friend_list :: proc() -> [dynamic]int {
+    friends := make([dynamic]int, context.temp_allocator)
+    for i in 0..<NPC_COUNT {
+        if g.npc_met[i] && g.npc_relationship[i] >= RELATIONSHIP_MAX {
+            append(&friends, i)
+        }
+    }
+    return friends
 }
 
 npc_relationship_tier :: proc(idx: int) -> int {
@@ -2027,22 +2112,26 @@ if sd.version >= 5 {
         g.total_play_time         = sp
     }
 }
-if sd.version >= 6 {
-    achievements_ld: [ACHIEVEMENT_COUNT]bool
-    if read_bytes(data, &off, &achievements_ld, size_of(achievements_ld)) {
+    if sd.version >= 23 {
+        achievements_ld: [ACHIEVEMENT_COUNT]bool
+        if !read_bytes(data, &off, &achievements_ld, size_of(achievements_ld)) {
+            return false
+        }
         g.achievements_unlocked = achievements_ld
-} else {
-    g.achievements_unlocked = {}
-    g.photo_seq = 0
-    for i in 0..<MAX_CARS {
-        g.cars[i].owned = false
-        g.cars[i].active = false
-        g.cars[i].occupied = false
-	g.cars[i].in_garage = false
+    } else if sd.version >= 6 {
+        OLD_ACH_COUNT :: 15
+        old_ld: [OLD_ACH_COUNT]bool
+        if !read_bytes(data, &off, &old_ld, size_of(old_ld)) {
+            return false
+        }
+        g.achievements_unlocked = {}
+        for i in 0..<OLD_ACH_COUNT {
+            g.achievements_unlocked[i] = old_ld[i]
+        }
+    } else {
+        g.achievements_unlocked = {}
     }
-}
 
-    }
 if sd.version >= 7 {
     ibr: bool
     if read_bytes(data, &off, &ibr, size_of(bool)) {
@@ -3422,9 +3511,12 @@ update_camera :: proc() {
     g.camera.target.x += (g.player.pos.x - g.camera.target.x) * 10 * dt
     g.camera.target.y += (g.player.pos.y - g.camera.target.y) * 10 * dt
 
-    if !g.bee_cam_active {
+    if !g.bee_cam_active && !g.friend_follow_active {
         target_zoom := PLAYER_ZOOM_CLOSE if g.player_zoom_active else PLAYER_ZOOM_NORMAL
         g.camera.zoom += (target_zoom - g.camera.zoom) * 8 * dt
+
+    g.camera.target.x = math.round(g.camera.target.x)
+    g.camera.target.y = math.round(g.camera.target.y)
     }
 }
 
@@ -3556,6 +3648,7 @@ update_phone_toggle :: proc() {
     if rl.IsKeyPressed(.SPACE) {
         g.phone_open = !g.phone_open
         if g.phone_open {
+	    friend_follow_end()
             g.phone_cursor  = 0
             g.phone_screen  = .Home
         }
@@ -3570,6 +3663,7 @@ update_phone_menu :: proc() {
     case .ContactDetail:  update_phone_contact_detail()
     case .Help:           update_phone_help()
     case .BuzzyBee:     update_buzzy_bee()
+    case .FindFriends:  update_find_my_friends()
     }
 }
 
@@ -3591,10 +3685,70 @@ update_phone_home :: proc() {
 	    g.phone_screen       = .BuzzyBee
 	    g.buzzy.started     = false
 	    g.buzzy.game_over   = false
+	case 8:
+            g.phone_screen         = .FindFriends
+            g.friend_follow_cursor = 0
+            friend_follow_end()
 
         }
     }
 }
+update_find_my_friends :: proc() {
+    friends := get_friend_list()
+
+    if rl.IsKeyPressed(.RIGHT_SHIFT) || rl.IsKeyPressed(.BACKSPACE) {
+        friend_follow_end()
+        g.phone_screen = .Home
+        return
+    }
+
+    if len(friends) == 0 {
+        friend_follow_end()
+        return
+    }
+
+    if rl.IsKeyPressed(.RIGHT) {
+        g.friend_follow_cursor = (g.friend_follow_cursor + 1) % len(friends)
+    }
+    if rl.IsKeyPressed(.LEFT) {
+        g.friend_follow_cursor = (g.friend_follow_cursor - 1 + len(friends)) % len(friends)
+    }
+
+    g.friend_follow_cursor = clamp(g.friend_follow_cursor, 0, len(friends)-1)
+    g.friend_follow_target = friends[g.friend_follow_cursor]
+    friend_follow_begin()
+}
+
+
+update_friend_follow_camera :: proc() {
+    if !g.friend_follow_active { return }
+    if g.friend_follow_target < 0 || g.friend_follow_target >= NPC_COUNT { return }
+
+    dt  := g.dt
+    npc := g.npcs[g.friend_follow_target]
+
+    g.camera.zoom     += (FRIEND_CAM_ZOOM - g.camera.zoom) * 6 * dt
+    g.camera.target.x += (npc.pos.x - g.camera.target.x) * 8 * dt
+    g.camera.target.y += (npc.pos.y - g.camera.target.y) * 8 * dt
+
+}
+friend_follow_begin :: proc() {
+    if g.friend_follow_active { return }
+    g.friend_cam_prev_target = g.camera.target
+    g.friend_cam_prev_zoom   = g.camera.zoom
+    g.friend_follow_active   = true
+}
+
+friend_follow_end :: proc() {
+    if !g.friend_follow_active { return }
+    g.friend_follow_active = false
+    g.camera.target = g.friend_cam_prev_target
+    g.camera.zoom   = g.friend_cam_prev_zoom
+}
+
+
+
+
 update_phone_help :: proc() {
     max_visible := 12
     max_scroll := max(0, len(HELP_LINES) - max_visible)
@@ -4157,6 +4311,7 @@ update_lightning_bug_catching :: proc() {
 
             if g.lightning_bugs_caught >= LANTERN_BUGS_REQUIRED {
                 g.inv_lantern = true
+		unlock_achievement(ACH_LIGHTNING_BUGS)
                 show_message("You collected enough to craft a Lantern! [9] to toggle it.", 5)
             }
             break
@@ -4531,6 +4686,8 @@ PHONE_APP_ICON_COLORS := [PHONE_APP_COUNT]rl.Color{
     {90, 210, 200, 255},   // stats      - teal
     {220, 90, 90, 255},   // help menu
     {255, 210, 40, 255}, // Buzzy Bee
+    {90, 200, 255, 255},   // Find My Friends
+
 }
 draw_contact_portrait :: proc(x, y, size: f32, npc: NPC) {
     rl.DrawRectangle(pxi(x)-2, pxi(y)-2, pxi(size)+4, pxi(size)+4, {60,40,20,255})
@@ -4573,6 +4730,42 @@ draw_phone_contacts :: proc(sx, sy, sw, sh: f32) {
         }
     }
 }
+draw_find_my_friends :: proc(sx, sy, sw, sh: f32) {
+    friends := get_friend_list()
+
+    if len(friends) == 0 {
+        rl.DrawText(strings.clone_to_cstring("No friends yet!", context.temp_allocator),
+            pxi(sx)+6, pxi(sy)+18, 6, COL_TEXT)
+        rl.DrawText(strings.clone_to_cstring("Reach 100% with", context.temp_allocator),
+            pxi(sx)+6, pxi(sy)+30, 6, COL_TEXT)
+        rl.DrawText(strings.clone_to_cstring("an NPC to unlock.", context.temp_allocator),
+            pxi(sx)+6, pxi(sy)+40, 6, COL_TEXT)
+        return
+    }
+
+    idx  := friends[clamp(g.friend_follow_cursor, 0, len(friends)-1)]
+    name := g.npcs[idx].name
+
+    counter := fmt.aprintf("%d / %d", g.friend_follow_cursor+1, len(friends),
+        allocator = context.temp_allocator)
+    rl.DrawText(strings.clone_to_cstring(counter, context.temp_allocator),
+        pxi(sx)+6, pxi(sy)+18, 6, COL_TEXT2)
+
+    rl.DrawRectangle(pxi(sx)+4, pxi(sy)+30, pxi(sw)-8, 34, rl.Color{40,60,80,220})
+    rl.DrawText(strings.clone_to_cstring(name, context.temp_allocator),
+        pxi(sx)+10, pxi(sy)+34, 8, COL_HONEY)
+    rl.DrawText(strings.clone_to_cstring("FOLLOWING", context.temp_allocator),
+        pxi(sx)+10, pxi(sy)+50, 6, rl.Color{120,255,120,255})
+
+    rl.DrawText(strings.clone_to_cstring("< LEFT / RIGHT >", context.temp_allocator),
+        pxi(sx)+6, pxi(sy)+72, 6, COL_TEXT)
+    rl.DrawText(strings.clone_to_cstring("to switch friend", context.temp_allocator),
+        pxi(sx)+6, pxi(sy)+82, 6, COL_TEXT2)
+    rl.DrawText(strings.clone_to_cstring("R-SHIFT:Back", context.temp_allocator),
+        pxi(sx)+6, pxi(sy+sh)-20, 6, rl.Color{140,140,100,200})
+}
+
+
 
 draw_phone_contact_detail :: proc(sx, sy, sw, sh: f32) {
     npc := g.npcs[g.selected_contact]
@@ -4722,12 +4915,13 @@ draw_phone :: proc() {
     rl.DrawRectangle(pxi(sx), pxi(sy), pxi(sw), pxi(sh), COL_PHONE_SCREEN)
 
     title := "FuzzyPhone"
-    switch g.phone_screen {
+    #partial switch g.phone_screen {
     case .Home:
     case .Contacts:      title = "Contacts"
     case .ContactDetail: title = g.npcs[g.selected_contact].name
     case .Help:          title = "Help"
     case .BuzzyBee:    title = "Buzzy Bee"
+    case .FindFriends:   title = "Find My Friends"
     }
     title_c := strings.clone_to_cstring(title, context.temp_allocator)
     rl.DrawText(title_c, pxi(sx) + 4, pxi(sy) + 3, 8, COL_HONEY)
@@ -4742,6 +4936,7 @@ draw_phone :: proc() {
     case .ContactDetail:  draw_phone_contact_detail(sx, sy, sw, sh)
     case .Help:           draw_phone_help(sx, sy, sw, sh)
     case .BuzzyBee:    draw_buzzy_bee(sx, sy, sw, sh)
+    case .FindFriends: draw_find_my_friends(sx, sy, sw, sh)
     }
 
     footer := "SPACE:exit"
@@ -4750,15 +4945,158 @@ draw_phone :: proc() {
     case .Contacts:      footer = "ENTER:open BKSP:back"
     case .ContactDetail: footer = "ENTER:message BKSP:back"
     case .BuzzyBee:    footer = "SHIFT:flap BKSP:back"
+    case .FindFriends:   footer = "R_SHIFT:BACK"
     }
     footer_c := strings.clone_to_cstring(footer, context.temp_allocator)
     rl.DrawText(footer_c, pxi(sx) + 4, pxi(sy) + pxi(sh) - 10, 6, rl.Color{150, 150, 150, 255})
 }
 
+phone_wp_hash01 :: proc(n: u32) -> f32 {
+    h := n
+    h  = (h ~ 61) ~ (h >> 16)
+    h  = h + (h << 3)
+    h  = h ~ (h >> 4)
+    h  = h * 0x27d4eb2d
+    h  = h ~ (h >> 15)
+    return f32(h % 1000) / 1000.0
+}
+
+phone_wp_flower :: proc(cx, cy: i32, petal, center: rl.Color, sway: f32) {
+    sx_off := i32(sway)
+
+    rl.DrawRectangle(cx, cy, 1, 9, rl.Color{54, 116, 62, 255})
+    rl.DrawRectangle(cx - 3, cy + 4, 3, 1, rl.Color{74, 148, 78, 255})
+    rl.DrawRectangle(cx + 1, cy + 6, 3, 1, rl.Color{74, 148, 78, 255})
+
+    bx := cx + sx_off
+    rl.DrawRectangle(bx - 1, cy - 5, 2, 2, petal)
+    rl.DrawRectangle(bx - 1, cy - 1, 2, 2, petal)
+    rl.DrawRectangle(bx - 3, cy - 3, 2, 2, petal)
+    rl.DrawRectangle(bx + 1, cy - 3, 2, 2, petal)
+    rl.DrawRectangle(bx - 1, cy - 3, 2, 2, center)
+}
+
+phone_wp_bee :: proc(bx, by: i32, t: f32, phase: f32, face_left: bool) {
+    body_y   := rl.Color{252, 216, 92,  255}
+    body_d   := rl.Color{40,  36,  30,  255}
+    wing_col := rl.Color{225, 245, 255, 165}
+
+    flap := math.sin(t * 18.0 + phase) > 0
+    wy   := by - 3 if flap else by - 2
+
+    rl.DrawRectangle(bx - 2, wy, 3, 2, wing_col)
+    rl.DrawRectangle(bx + 2, wy, 3, 2, wing_col)
+
+    rl.DrawRectangle(bx - 3, by,     7, 5, body_y)
+    rl.DrawRectangle(bx - 1, by,     2, 5, body_d)
+    rl.DrawRectangle(bx + 2, by,     1, 5, body_d)
+
+    if face_left {
+        rl.DrawRectangle(bx - 5, by + 1, 2, 3, body_d)
+        rl.DrawRectangle(bx + 4, by + 2, 2, 1, body_d)
+        rl.DrawRectangle(bx - 5, by,     1, 1, rl.Color{255, 255, 255, 200})
+    } else {
+        rl.DrawRectangle(bx + 3, by + 1, 2, 3, body_d)
+        rl.DrawRectangle(bx - 6, by + 2, 2, 1, body_d)
+        rl.DrawRectangle(bx + 4, by,     1, 1, rl.Color{255, 255, 255, 200})
+    }
+}
+
+draw_phone_wallpaper :: proc(sx, wall_top, sw, wall_h: f32) {
+    t := f32(rl.GetTime())
+
+    ix := pxi(sx)
+    iy := pxi(wall_top)
+    iw := pxi(sw)
+    ih := pxi(wall_h)
+
+    rl.BeginScissorMode(ix, iy, iw, ih)
+
+    bands := i32(6)
+    for b: i32 = 0; b < bands; b += 1 {
+        band_h := ih / bands + 1
+        f      := f32(b) / f32(bands - 1)
+        col := rl.Color{
+            u8(120.0 + (250.0 - 120.0) * (1.0 - f) * 0.55 + 40.0),
+            u8(170.0 + (225.0 - 170.0) * (1.0 - f) * 0.60),
+            u8(215.0 - 70.0 * (1.0 - f)),
+            255,
+        }
+        rl.DrawRectangle(ix, iy + b * (ih / bands), iw, band_h, col)
+    }
+
+    for c: i32 = 0; c < 3; c += 1 {
+        seed  := u32(c) * 37 + 11
+        base_y := iy + 4 + i32(phone_wp_hash01(seed) * f32(ih) * 0.35)
+        span  := f32(iw + 40)
+        cx    := ix - 20 + i32(math.mod(t * (3.0 + f32(c) * 1.5) + phone_wp_hash01(seed + 3) * span, span))
+
+        cloud := rl.Color{255, 252, 240, 130}
+        rl.DrawRectangle(cx,      base_y,     10, 3, cloud)
+        rl.DrawRectangle(cx + 3,  base_y - 2,  6, 3, cloud)
+        rl.DrawRectangle(cx - 2,  base_y + 2,  8, 2, cloud)
+    }
+
+    grass_top := iy + ih - ih / 3
+    rl.DrawRectangle(ix, grass_top, iw, ih - (grass_top - iy), rl.Color{104, 176, 92, 255})
+    rl.DrawRectangle(ix, grass_top, iw, 2,                     rl.Color{132, 204, 112, 255})
+    rl.DrawRectangle(ix, iy + ih - 3, iw, 3, rl.Color{78, 140, 70, 255})
+
+    for gi: i32 = 0; gi < 10; gi += 1 {
+        gx := ix + 3 + i32(phone_wp_hash01(u32(gi) * 91 + 5) * f32(iw - 6))
+        rl.DrawRectangle(gx, grass_top - 2, 1, 2, rl.Color{132, 204, 112, 255})
+    }
+
+    petals := [4]rl.Color{
+        {255, 138, 176, 255}, // pink
+        {255, 206, 92,  255}, // gold
+        {186, 152, 255, 255}, // lilac
+        {255, 255, 255, 255}, // white
+    }
+
+    for fi: i32 = 0; fi < 7; fi += 1 {
+        seed := u32(fi) * 53 + 7
+        fx   := ix + 5 + i32(phone_wp_hash01(seed) * f32(iw - 10))
+        fy   := grass_top + 1 + i32(phone_wp_hash01(seed + 1) * 4.0)
+        sway := math.sin(t * 1.6 + f32(fi) * 0.9) * 1.4
+
+        phone_wp_flower(
+            fx,
+            fy,
+            petals[fi % 4],
+            rl.Color{255, 236, 150, 255},
+            sway,
+        )
+    }
+
+    for bi: i32 = 0; bi < 5; bi += 1 {
+        seed  := u32(bi) * 29 + 3
+        phase := phone_wp_hash01(seed) * 6.28
+        speed := 8.0 + phone_wp_hash01(seed + 1) * 7.0
+
+        span := f32(iw + 24)
+        raw  := math.mod(t * speed + phone_wp_hash01(seed + 2) * span, span)
+
+        goes_left := (bi % 2) == 1
+        bx := ix - 12 + i32(raw)
+        if goes_left {
+            bx = ix + iw + 12 - i32(raw)
+        }
+
+        band := f32(ih) * 0.62
+        by := iy + 6 + i32(phone_wp_hash01(seed + 4) * band) + i32(math.sin(t * 2.4 + phase) * 3.0)
+
+        phone_wp_bee(bx, by, t, phase, goes_left)
+    }
+
+    rl.EndScissorMode()
+}
+
 draw_phone_home :: proc(sx, sy, sw, sh: f32) {
     wall_top := sy + 16
-    rl.DrawRectangle(pxi(sx), pxi(wall_top), pxi(sw), pxi(sh) / 3, rl.Color{35, 55, 100, 255})
-    rl.DrawRectangle(pxi(sx), pxi(wall_top) + pxi(sh) / 3, pxi(sw), pxi(sh) - pxi(sh) / 3, rl.Color{18, 26, 55, 255})
+    draw_phone_wallpaper(sx, wall_top, sw, sh - (wall_top - sy))
+    rl.DrawRectangle(pxi(sx), pxi(wall_top), pxi(sw), pxi(sh) - (pxi(wall_top) - pxi(sy)), rl.Color{12, 18, 40, 120})
+
 
     icon_size  := f32(16)
     row_h      := f32(26)
@@ -6574,7 +6912,9 @@ update_world :: proc() {
     
     update_bee_cam_toggle()
 
-    if g.bee_cam_active {
+    if g.friend_follow_active {
+        update_friend_follow_camera()
+    } else if g.bee_cam_active {
 	update_bee_cam()
 	update_bee_cam_camera()
     } else {
@@ -12272,21 +12612,42 @@ draw_dirt_roads :: proc() {
 
 // DRAW GROUND (town center)
 
-
 draw_ground :: proc() {
+    view_tl := rl.GetScreenToWorld2D({0, 0}, g.camera)
+    view_br := rl.GetScreenToWorld2D({f32(GAME_W), f32(GAME_H)}, g.camera)
+
+    if view_br.x < -600 || view_tl.x > 600 || view_br.y < -600 || view_tl.y > 600 {
+        return
+    }
+
     tile :: i32(16)
-    for ty := i32(-600); ty < 600; ty += tile {
-        for tx := i32(-600); tx < 600; tx += tile {
-            col := COL_SIDEWALK if ((tx/tile)+(ty/tile))%2==0 else COL_SIDEWALK2
+
+    sx0 := max((i32(view_tl.x) / tile) * tile - tile, -600)
+    sy0 := max((i32(view_tl.y) / tile) * tile - tile, -600)
+    sx1 := min((i32(view_br.x) / tile) * tile + tile,  600)
+    sy1 := min((i32(view_br.y) / tile) * tile + tile,  600)
+
+    for ty := sy0; ty < sy1; ty += tile {
+        for tx := sx0; tx < sx1; tx += tile {
+            parity := (floor_div(tx, tile) + floor_div(ty, tile)) & 1
+            col := COL_SIDEWALK if parity == 0 else COL_SIDEWALK2
             rl.DrawRectangle(tx, ty, tile, tile, col)
         }
     }
-    for ty := i32(-180); ty < 180; ty += 8 {
-        for tx := i32(-180); tx < 180; tx += 8 {
-            col := COL_GRASS2 if ((tx/8)+(ty/8))%2==0 else COL_GRASS3
+
+    gx0 := max((i32(view_tl.x) / 8) * 8 - 8, -180)
+    gy0 := max((i32(view_tl.y) / 8) * 8 - 8, -180)
+    gx1 := min((i32(view_br.x) / 8) * 8 + 8,  180)
+    gy1 := min((i32(view_br.y) / 8) * 8 + 8,  180)
+
+    for ty := gy0; ty < gy1; ty += 8 {
+        for tx := gx0; tx < gx1; tx += 8 {
+            parity := (floor_div(tx, 8) + floor_div(ty, 8)) & 1
+            col := COL_GRASS2 if parity == 0 else COL_GRASS3
             rl.DrawRectangle(tx, ty, 8, 8, col)
         }
     }
+
     rl.DrawRectangle(-600, -36, 1200, 72, COL_ROAD)
     rl.DrawRectangle(-36, -600, 72, 1200, COL_ROAD)
     rl.DrawRectangle(-600, -36, 1200, 2, COL_ROAD_LINE)
@@ -12303,20 +12664,287 @@ draw_ground :: proc() {
 }
 
 
+
 // DRAW TOWN DECORATIONS
+
+shade3 :: proc(base: rl.Color) -> (lo, mid, hi: rl.Color) {
+    lo  = rl.Color{u8(f32(base.r)*0.55), u8(f32(base.g)*0.55), u8(f32(base.b)*0.55), base.a}
+    mid = base
+    hi  = rl.Color{
+        u8(min(255.0, f32(base.r)*1.35)),
+        u8(min(255.0, f32(base.g)*1.35)),
+        u8(min(255.0, f32(base.b)*1.35)),
+        base.a,
+    }
+    return
+}
+
+draw_potted_plant :: proc(px, py: f32, seed: int, t: f32) {
+    ix := pxi(px); iy := pxi(py)
+    sway := math.sin(t*1.4 + f32(seed)*1.7) * 1.5
+    lo, mid, hi := shade3(rl.Color{168, 88, 54, 255})
+    rl.DrawRectangle(ix-9, iy-4, 18, 4, hi)      // rim
+    rl.DrawRectangle(ix-8, iy,   16, 9, mid)     // body
+    rl.DrawRectangle(ix-8, iy+7,  16, 2, lo)     // base shadow
+    rl.DrawRectangle(ix-8, iy,    2, 9, hi)      // left light edge
+    rl.DrawRectangle(ix+6, iy,    2, 9, lo)      // right shade
+
+    rl.DrawRectangle(ix-7, iy-3, 14, 2, rl.Color{62, 44, 30, 255})
+
+    gl_lo, gl_mid, gl_hi := shade3(rl.Color{54, 132, 52, 255})
+    sx := pxi(sway)
+    rl.DrawRectangle(ix-7+sx, iy-9,  14, 6, gl_mid)
+    rl.DrawRectangle(ix-5+sx, iy-13, 10, 5, gl_hi)
+    rl.DrawRectangle(ix-3+sx, iy-16,  6, 4, gl_mid)
+    rl.DrawRectangle(ix-7+sx, iy-5,   3, 2, gl_lo)
+    rl.DrawRectangle(ix+4+sx, iy-5,   3, 2, gl_lo)
+}
+
+draw_potted_flowers :: proc(px, py: f32, seed: int, t: f32) {
+    ix := pxi(px); iy := pxi(py)
+
+    lo, mid, hi := shade3(rl.Color{182, 96, 60, 255})
+    rl.DrawRectangle(ix-11, iy-4, 22, 4, hi)
+    rl.DrawRectangle(ix-10, iy,   20, 9, mid)
+    rl.DrawRectangle(ix-10, iy+7, 20, 2, lo)
+    rl.DrawRectangle(ix-10, iy,    2, 9, hi)
+    rl.DrawRectangle(ix+8,  iy,    2, 9, lo)
+    rl.DrawRectangle(ix-9,  iy-3, 18, 2, rl.Color{62, 44, 30, 255})
+
+    petal_sets := [3]rl.Color{
+        {236, 108, 148, 255},
+        {248, 196,  72, 255},
+        {168, 128, 232, 255},
+    }
+
+    for b in 0..<3 {
+        bx := ix - 6 + i32(b)*6
+        sway := pxi(math.sin(t*1.9 + f32(seed + b)*2.1) * 1.0)
+        rl.DrawRectangle(bx, iy-10, 1, 7, rl.Color{48, 118, 46, 255})
+        pc := petal_sets[(seed + b) % 3]
+        rl.DrawRectangle(bx-2+sway, iy-13, 5, 2, pc)
+        rl.DrawRectangle(bx-1+sway, iy-15, 3, 5, pc)
+        rl.DrawRectangle(bx  +sway, iy-13, 1, 1, rl.Color{252, 236, 140, 255})
+    }
+}
+
+draw_pumpkin :: proc(px, py: f32, seed: int, t: f32, big: bool) {
+    ix := pxi(px); iy := pxi(py)
+    bob := pxi(math.sin(t*1.1 + f32(seed)*0.9) * 0.6)
+    iy += bob
+
+    w  : i32 = big ? 9 : 6
+    h  : i32 = big ? 7 : 5
+
+    lo, mid, hi := shade3(rl.Color{232, 126, 34, 255})
+    rl.DrawRectangle(ix-w,     iy-h+1, 3,     h*2-2, lo)
+    rl.DrawRectangle(ix-w+3,   iy-h,   w*2-6, h*2,   mid)
+    rl.DrawRectangle(ix+w-3,   iy-h+1, 3,     h*2-2, lo)
+    rl.DrawRectangle(ix-2, iy-h+1, 2, h*2-2, hi)
+    rl.DrawRectangle(ix-w+2, iy+h-2, w*2-4, 2, lo)
+
+    rl.DrawRectangle(ix-1, iy-h-3, 2, 3, rl.Color{96, 128, 48, 255})
+    rl.DrawRectangle(ix+1, iy-h-4, 2, 1, rl.Color{112, 148, 56, 255})
+    rl.DrawRectangle(ix+3, iy-h-5, 1, 2, rl.Color{112, 148, 56, 255})
+}
+
+draw_crosswalk_signal :: proc(px, py: f32, t: f32, phase_offset: f32) {
+    ix := pxi(px); iy := pxi(py)
+
+    cyc := math.mod(t + phase_offset, 10.0)
+    walk_on   := false
+    hand_on   := false
+    if cyc < 4.0 {
+        walk_on = true
+    } else if cyc < 6.0 {
+        walk_on = math.mod(cyc*4.0, 2.0) < 1.0
+    } else {
+        hand_on = true
+    }
+
+    rl.DrawRectangle(ix-1, iy, 3, 22, rl.Color{72, 76, 84, 255})
+    rl.DrawRectangle(ix-1, iy, 1, 22, rl.Color{104, 110, 120, 255})
+    rl.DrawRectangle(ix-3, iy+21, 7, 2, rl.Color{56, 58, 64, 255})
+
+    rl.DrawRectangle(ix-7, iy-16, 15, 17, rl.Color{44, 46, 52, 255})
+    rl.DrawRectangleLinesEx({f32(ix-7), f32(iy-16), 15, 17}, 1, rl.Color{96, 100, 110, 255})
+    rl.DrawRectangle(ix-8, iy-17, 17, 2, rl.Color{28, 30, 34, 255})
+
+    wc := walk_on ? rl.Color{236, 248, 255, 255} : rl.Color{58, 62, 68, 255}
+    rl.DrawRectangle(ix-1, iy-14, 2, 2, wc)         // head
+    rl.DrawRectangle(ix-1, iy-11, 2, 3, wc)         // torso
+    rl.DrawRectangle(ix-3, iy-10, 2, 1, wc)         // arm
+    rl.DrawRectangle(ix+1, iy-11, 2, 1, wc)         // arm
+    rl.DrawRectangle(ix-2, iy-8,  2, 3, wc)         // leg
+    rl.DrawRectangle(ix+1, iy-8,  2, 3, wc)         // leg
+    if walk_on {
+        rl.DrawRectangle(ix-5, iy-15, 11, 11, rl.Color{200, 255, 220, 40})
+    }
+
+    hc := hand_on ? rl.Color{248, 148, 48, 255} : rl.Color{58, 50, 44, 255}
+    rl.DrawRectangle(ix-3, iy-4, 7, 4, hc)
+    rl.DrawRectangle(ix-3, iy-5, 1, 1, hc)
+    rl.DrawRectangle(ix-1, iy-6, 1, 2, hc)
+    rl.DrawRectangle(ix+1, iy-6, 1, 2, hc)
+    rl.DrawRectangle(ix+3, iy-5, 1, 1, hc)
+    if hand_on {
+        rl.DrawRectangle(ix-5, iy-6, 11, 6, rl.Color{255, 180, 80, 36})
+    }
+}
+
+draw_bench :: proc(px, py: f32) {
+    ix := pxi(px); iy := pxi(py)
+
+    rl.DrawRectangle(ix-15, iy+9, 30, 2, rl.Color{0, 0, 0, 50})
+
+    wl, wm, wh := shade3(rl.Color{132, 88, 44, 255})
+    rl.DrawRectangle(ix-14, iy-12, 28, 3, wm)
+    rl.DrawRectangle(ix-14, iy-12, 28, 1, wh)
+    rl.DrawRectangle(ix-14, iy-8,  28, 3, wm)
+    rl.DrawRectangle(ix-14, iy-8,  28, 1, wh)
+    rl.DrawRectangle(ix-15, iy-3, 30, 4, wm)
+    rl.DrawRectangle(ix-15, iy-3, 30, 1, wh)
+    rl.DrawRectangle(ix-15, iy,   30, 1, wl)
+    rl.DrawRectangle(ix-13, iy+1, 3, 8, wl)
+    rl.DrawRectangle(ix+10, iy+1, 3, 8, wl)
+    rl.DrawRectangle(ix-16, iy-6, 2, 7, wl)
+    rl.DrawRectangle(ix+14, iy-6, 2, 7, wl)
+}
+
+brass_tone :: proc(v: f32) -> rl.Color {
+    r := u8(clamp(92.0  + v * 163.0, 0, 255))
+    g := u8(clamp(62.0  + v * 148.0, 0, 255))
+    b := u8(clamp(24.0  + v *  76.0, 0, 255))
+    return rl.Color{r, g, b, 255}
+}
+
+draw_greek_column :: proc(cx, cy: i32, h: i32, t: f32) {
+    lo, mid, hi := shade3(rl.Color{226, 224, 214, 255})
+
+    rl.DrawRectangle(cx-6, cy-2,      13, 4, lo)
+    rl.DrawRectangle(cx-5, cy-4,      11, 3, mid)
+
+    rl.DrawRectangle(cx-4, cy-4-h,     9, h, mid)
+    rl.DrawRectangle(cx-4, cy-4-h,     2, h, hi)   // lit edge
+    rl.DrawRectangle(cx+3, cy-4-h,     2, h, lo)   // shade edge
+    rl.DrawRectangle(cx-1, cy-4-h,     1, h, lo)   // center flute
+    rl.DrawRectangle(cx+1, cy-4-h,     1, h, lo)
+
+    rl.DrawRectangle(cx-5, cy-7-h,    11, 3, hi)
+    rl.DrawRectangle(cx-6, cy-10-h,   13, 3, mid)
+    rl.DrawRectangle(cx-6, cy-10-h,   13, 1, hi)
+}
+
+
+draw_bee_statue :: proc(cx, cy: i32, t: f32) {
+    p_lo  := rl.Color{186, 194, 208, 255}
+    p_mid := rl.Color{232, 238, 246, 255}
+    p_hi  := rl.Color{255, 255, 255, 255}
+    wa := u8(90.0 + math.sin(t*2.2)*28.0)
+    rl.DrawRectangle(cx-13, cy-20, 7, 4, rl.Color{214, 232, 248, wa})
+    rl.DrawRectangle(cx-15, cy-18, 6, 3, rl.Color{214, 232, 248, wa})
+    rl.DrawRectangle(cx+6,  cy-20, 7, 4, rl.Color{214, 232, 248, wa})
+    rl.DrawRectangle(cx+9,  cy-18, 6, 3, rl.Color{214, 232, 248, wa})
+    rl.DrawRectangle(cx-7, cy-14, 14, 12, p_mid)
+    rl.DrawRectangle(cx-8, cy-12, 16,  8, p_mid)
+    rl.DrawRectangle(cx-6, cy-16, 12,  3, p_mid)
+    rl.DrawRectangle(cx-5, cy-2,  10,  2, p_lo)
+    rl.DrawRectangle(cx-7, cy-11, 14, 1, p_lo)
+    rl.DrawRectangle(cx-7, cy-7,  14, 1, p_lo)
+    rl.DrawRectangle(cx-8, cy-12,  2, 8, p_hi)
+    rl.DrawRectangle(cx-6, cy-16,  2, 3, p_hi)
+    rl.DrawRectangle(cx-5, cy-24, 10, 8, p_mid)
+    rl.DrawRectangle(cx-4, cy-25,  8, 2, p_mid)
+    rl.DrawRectangle(cx-5, cy-24,  2, 8, p_hi)
+    rl.DrawRectangle(cx+3, cy-24,  2, 8, p_lo)
+    rl.DrawRectangle(cx-3, cy-22, 2, 2, p_lo)
+    rl.DrawRectangle(cx+1, cy-22, 2, 2, p_lo)
+    rl.DrawRectangle(cx-4, cy-28, 1, 3, p_mid)
+    rl.DrawRectangle(cx-6, cy-30, 2, 2, p_hi)
+    rl.DrawRectangle(cx+3, cy-28, 1, 3, p_mid)
+    rl.DrawRectangle(cx+4, cy-30, 2, 2, p_hi)
+    cs := 0.5 + math.sin(t*1.7)*0.5
+    c_band := brass_tone(0.45 + cs*0.35)
+    c_pt   := brass_tone(0.70 + cs*0.30)
+    rl.DrawRectangle(cx-6, cy-31, 12, 3, c_band)
+    rl.DrawRectangle(cx-6, cy-31, 12, 1, c_pt)
+    rl.DrawRectangle(cx-5, cy-34, 2, 3, c_pt)
+    rl.DrawRectangle(cx-1, cy-36, 2, 5, c_pt)
+    rl.DrawRectangle(cx+3, cy-34, 2, 3, c_pt)
+    rl.DrawRectangle(cx-5, cy-35, 2, 2, rl.Color{236, 108, 148, 255})
+    rl.DrawRectangle(cx-1, cy-37, 2, 2, rl.Color{130, 214, 240, 255})
+    rl.DrawRectangle(cx+3, cy-35, 2, 2, rl.Color{236, 108, 148, 255})
+
+    gcyc := math.mod(t, 3.4)
+    if gcyc < 1.1 {
+        p := gcyc / 1.1
+        fade := math.sin(p * math.PI)
+        band_y := cy - 38 + i32(p * 40.0)
+        for k in 0..<5 {
+            yy := band_y + i32(k)
+            xx := cx - 10 + i32(k)
+            a  := u8(fade * f32(150 - k*22))
+            rl.DrawRectangle(xx, yy, 18 - i32(k)*2, 1, rl.Color{255, 255, 255, a})
+        }
+    }
+
+    spark_pts := [3][2]i32{{-6, -22}, {5, -13}, {-4, -6}}
+    for si in 0..<len(spark_pts) {
+        ph := math.mod(t*0.8 + f32(si)*0.66, 2.0)
+        if ph < 0.3 {
+            sx := cx + spark_pts[si][0]
+            sy := cy + spark_pts[si][1]
+            rl.DrawRectangle(sx,   sy,   2, 2, rl.Color{255,255,255,235})
+            rl.DrawRectangle(sx-1, sy,   1, 1, rl.Color{255,255,255,120})
+            rl.DrawRectangle(sx+2, sy,   1, 1, rl.Color{255,255,255,120})
+            rl.DrawRectangle(sx,   sy-1, 1, 1, rl.Color{255,255,255,120})
+            rl.DrawRectangle(sx,   sy+2, 1, 1, rl.Color{255,255,255,120})
+        }
+    }
+}
+
 
 
 draw_town_decorations :: proc() {
+    view := world_view_rect()
+    if !rl.CheckCollisionRecs({-260, -260, 520, 520}, view) { return }
+
+    t := f32(rl.GetTime())
+
     bench_positions := [4][2]f32{{-80,-60},{80,-60},{-60,80},{60,80}}
     for bp in bench_positions {
-        ix := pxi(bp[0]); iy := pxi(bp[1])
-        rl.DrawRectangle(ix-14, iy-2, 28, 4, {108,72,36,255})
-        rl.DrawRectangle(ix-14, iy-10, 28, 4, {108,72,36,255})
-        rl.DrawRectangle(ix-12, iy+2, 3, 8, {88,56,28,255})
-        rl.DrawRectangle(ix+9,  iy+2, 3, 8, {88,56,28,255})
+        draw_bench(bp[0], bp[1])
     }
 
-    // Fountain
+    for fi := -52; fi <= 52; fi += 1 {
+        h := i32(math.sqrt(max(0.0, 52.0*52.0 - f32(fi)*f32(fi))))
+        rl.DrawRectangle(i32(fi)-1, -h, 2, h*2, brass_tone(0.30))
+    }
+    for fi := -49; fi <= 49; fi += 1 {
+        h := i32(math.sqrt(max(0.0, 49.0*49.0 - f32(fi)*f32(fi))))
+        ang  := math.atan2(f32(h), f32(fi))
+        sheen := 0.5 + 0.5*math.sin(ang*2.0 - t*1.1)
+        rl.DrawRectangle(i32(fi)-1, -h, 2, h*2, brass_tone(0.34 + sheen*0.52))
+    }
+    for fi := -45; fi <= 45; fi += 1 {
+        h := i32(math.sqrt(max(0.0, 45.0*45.0 - f32(fi)*f32(fi))))
+        rl.DrawRectangle(i32(fi)-1, -h, 2, h*2, brass_tone(0.22))
+    }
+
+    m_lo, m_mid, m_hi := shade3(rl.Color{222, 218, 206, 255})
+    for fi := -44; fi <= 44; fi += 1 {
+        h := i32(math.sqrt(max(0.0, 44.0*44.0 - f32(fi)*f32(fi))))
+        rl.DrawRectangle(i32(fi)-1, -h, 2, h*2, m_mid)
+    }
+    for fi := -41; fi <= 41; fi += 1 {
+        h := i32(math.sqrt(max(0.0, 41.0*41.0 - f32(fi)*f32(fi))))
+        rl.DrawRectangle(i32(fi)-1, -h, 2, h*2, m_hi)
+    }
+    for fi := -39; fi <= 39; fi += 1 {
+        h := i32(math.sqrt(max(0.0, 39.0*39.0 - f32(fi)*f32(fi))))
+        rl.DrawRectangle(i32(fi)-1, -h, 2, h*2, m_lo)
+    }
+
     for fi := -38; fi <= 38; fi += 1 {
         h := i32(math.sqrt(max(0.0, 38.0*38.0 - f32(fi)*f32(fi))))
         rl.DrawRectangle(i32(fi)-1, -h, 2, h*2, COL_WATER)
@@ -12325,38 +12953,152 @@ draw_town_decorations :: proc() {
         h := i32(math.sqrt(max(0.0, 30.0*30.0 - f32(fi)*f32(fi))))
         rl.DrawRectangle(i32(fi)-1, -h, 2, h*2, COL_WATER2)
     }
-    rl.DrawRectangle(-3, -28, 6, 32, {160,180,200,255})
-    rl.DrawRectangle(-5, -30, 10, 4, {180,200,220,255})
-    t := f32(rl.GetTime())
-    for ji in 0..<8 {
-        ang := f32(ji)*0.785 + t*0.5
-        jx  := i32(math.cos(ang)*10); jy := i32(math.sin(ang)*6) - 22
-        rl.DrawRectangle(jx, jy, 2, 4, {180,220,255,200})
+
+    for wi in 0..<7 {
+        wy := -32 + i32(wi)*9
+        fy := f32(wy)
+        cw := math.sqrt(max(0.0, 36.0*36.0 - fy*fy))
+        if cw < 3 { continue }
+        drift := math.sin(t*1.15 + f32(wi)*0.85) * (cw * 0.35)
+        seg_w := i32(cw * 0.42)
+        a := u8(52.0 + math.sin(t*1.9 + f32(wi))*34.0)
+        rl.DrawRectangle(i32(drift) - seg_w/2, wy, seg_w, 2,
+                         rl.Color{206, 240, 255, a})
+        rl.DrawRectangle(i32(-drift*0.6) - seg_w/3, wy+3, seg_w*2/3, 1,
+                         rl.Color{178, 224, 250, u8(f32(a)*0.7)})
     }
 
-    // Town sign
-    rl.DrawRectangle(-52, -46, 104, 20, {80,56,24,255})
-    rl.DrawRectangle(-52, -46, 104, 3,  {100,72,32,255})
-    rl.DrawRectangleLinesEx({-52,-46,104,20}, 1, COL_HONEY)
-    rl.DrawText("HONEYVILLE", -48, -42, 8, COL_HONEY)
-    rl.DrawRectangle(-46, -26, 4, 20, {80,56,24,255})
-    rl.DrawRectangle( 42, -26, 4, 20, {80,56,24,255})
+    for ri in 0..<3 {
+        phase := math.mod(t*0.55 + f32(ri)*0.33, 1.0)
+        rad   := 7.0 + phase * 28.0
+        a     := u8((1.0 - phase) * 95.0)
+        rl.DrawCircleLines(0, 0, rad, rl.Color{206, 240, 255, a})
+    }
 
-    // Plaza flowers
-    plaza_flowers := [8][2]f32{{-120,80},{120,-80},{120,80},{180,85},{-80,-
-180},{90,-170},{-80,110},{80,90}}
-    for fi in 0..<8 { draw_flower(plaza_flowers[fi][0], plaza_flowers[fi][1], 
-fi) }
+    col_x := [4]i32{-24, -9, 9, 24}
+    col_h := [4]i32{16, 22, 22, 16}
+    for ci in 0..<len(col_x) {
+        draw_greek_column(col_x[ci], -6, col_h[ci], t)
+    }
 
-    // Bushes
+    rl.DrawRectangle(-20, -14, 41, 5, m_mid)
+    rl.DrawRectangle(-20, -14, 41, 1, m_hi)
+    rl.DrawRectangle(-16, -19, 33, 5, m_mid)
+    rl.DrawRectangle(-16, -19, 33, 1, m_hi)
+    rl.DrawRectangle(-12, -24, 25, 5, m_mid)
+    rl.DrawRectangle(-12, -24, 25, 1, m_hi)
+    rl.DrawRectangle(-11, -26, 23, 2, brass_tone(0.62))
+    rl.DrawRectangle(-11, -26, 23, 1, brass_tone(0.88))
+
+    draw_bee_statue(0, -26, t)
+
+    for ji in 0..<10 {
+        ang  := f32(ji)*0.628
+        life := math.mod(t*1.25 + f32(ji)*0.37, 1.0)
+        r0   : f32 = 34.0
+        r1   : f32 = 12.0
+        rr   := r0 + (r1 - r0)*life
+        jx := i32(math.cos(ang) * rr)
+        jy := i32(math.sin(ang) * rr * 0.55) - i32((1.0-life)*(1.0-life)*22.0)
+        a  := u8((1.0 - life*life) * 210.0)
+        rl.DrawRectangle(jx, jy, 2, 3, rl.Color{188, 226, 255, a})
+        if life > 0.75 {
+            rl.DrawRectangle(jx-1, jy+3, 4, 1, rl.Color{224, 246, 255, u8(a/2)})
+        }
+    }
+
+    for si in 0..<6 {
+        sp := math.mod(t*0.9 + f32(si)*0.42, 2.2)
+        if sp < 0.32 {
+            sx := i32(math.cos(f32(si)*2.4)*24)
+            sy := i32(math.sin(f32(si)*3.1)*15)
+            rl.DrawRectangle(sx, sy, 2, 2, rl.Color{255, 255, 255, 200})
+        }
+    }
+
+    honey_letters := [10]cstring{"H","O","N","E","Y","V","I","L","L","E"}
+    for li in 0..<len(honey_letters) {
+        frac := f32(li) / f32(len(honey_letters) - 1)
+        ang  := (200.0 + frac*140.0) * math.PI / 180.0
+        lx := i32(math.cos(ang) * 48.0)
+        ly := i32(math.sin(ang) * 48.0) * -1
+        sheen := 0.5 + 0.5*math.sin(t*1.6 - f32(li)*0.55)
+        rl.DrawText(honey_letters[li], lx-2, ly-3, 8, brass_tone(0.12))          // shadow
+        rl.DrawText(honey_letters[li], lx-3, ly-4, 8, brass_tone(0.55 + sheen*0.45))
+    }
+
+    for side in 0..<2 {
+        sx : i32 = side == 0 ? -50 : 50
+        dir : i32 = side == 0 ? 1 : -1
+        rl.DrawRectangle(sx-2, -6, 5, 2, brass_tone(0.70))
+        rl.DrawRectangle(sx-1 + dir*2, -10, 3, 2, brass_tone(0.58))
+        rl.DrawRectangle(sx-1 + dir*2,  -2, 3, 2, brass_tone(0.58))
+        rl.DrawRectangle(sx   + dir*4, -14, 2, 2, brass_tone(0.46))
+        rl.DrawRectangle(sx   + dir*4,   2, 2, 2, brass_tone(0.46))
+    }
+
+    rl.DrawRectangle(-46, -74, 4, 22, {80,56,24,255})
+    rl.DrawRectangle( 42, -74, 4, 22, {80,56,24,255})
+    rl.DrawRectangle(-56, -98, 112, 26, brass_tone(0.20))
+    rl.DrawRectangle(-54, -96, 108, 22, {96,66,28,255})
+    rl.DrawRectangle(-54, -96, 108, 3,  {124,88,38,255})
+    rl.DrawRectangleLinesEx({-56,-98,112,26}, 1, brass_tone(0.80))
+    rl.DrawText("===HONEYVILLE===", -49, -91, 8, COL_TEXT)
+    swing := pxi(math.sin(t*1.6) * 2.0)
+    rl.DrawRectangle(48+swing, -72, 2, 5, {120,84,32,255})
+    rl.DrawRectangle(47+swing, -67, 4, 4, COL_HONEY)
+
+
+    draw_crosswalk_signal(-44, -44, t, 0.0)
+    draw_crosswalk_signal( 44, -44, t, 5.0)
+    draw_crosswalk_signal(-44,  44, t, 5.0)
+    draw_crosswalk_signal( 44,  44, t, 0.0)
+
+    plaza_flowers := [8][2]f32{
+        {-120,80},{120,-80},{120,80},{180,85},
+        {-80,-180},{90,-170},{-80,110},{80,90},
+    }
+    for fi in 0..<8 { draw_flower(plaza_flowers[fi][0], plaza_flowers[fi][1], fi) }
+
+    pot_flower_pos := [4][2]f32{
+        {-82, -125}, { 100, -82},
+        {-92,  92}, {-158, -78},
+    }
+    for i in 0..<4 {
+        draw_potted_flowers(pot_flower_pos[i][0], pot_flower_pos[i][1], i, t)
+    }
+
+    pot_plant_pos := [2][2]f32{
+        {-104, -52}, {  66, -96},
+    }
+    for i in 0..<2 {
+        draw_potted_plant(pot_plant_pos[i][0], pot_plant_pos[i][1], i, t)
+    }
+
+    pumpkin_pos := [7][3]f32{
+        {-146,  66, 1}, {-134, 64, 0},
+        { 146, -96, 1}, { 158, -88, 0},
+        { -58, 132, 1}, { -46, 138, 0},
+        {  76, -124, 1},
+    }
+    for i in 0..<7 {
+        draw_pumpkin(pumpkin_pos[i][0], pumpkin_pos[i][1], i, t, pumpkin_pos[i][2] > 0.5)
+    }
+
+
     bush_pos := [5][2]f32{{-60,-134},{86,-78},{-86,67},{60,-170},{60,175}}
     for bp in bush_pos {
         ix := pxi(bp[0]); iy := pxi(bp[1])
+        rl.DrawRectangle(ix-9, iy+3, 18, 2, rl.Color{0,0,0,45})
         rl.DrawRectangle(ix-8, iy-4, 16, 8, {36,100,36,255})
         rl.DrawRectangle(ix-6, iy-7, 12, 6, {48,120,48,255})
-        rl.DrawRectangle(ix-4, iy-9, 8, 4,  {60,140,60,255})
+        rl.DrawRectangle(ix-4, iy-9, 8,  4, {60,140,60,255})
+        rl.DrawRectangle(ix-7, iy-3, 2,  2, {28,80,28,255})
+        rl.DrawRectangle(ix+5, iy-3, 2,  2, {28,80,28,255})
+        rl.DrawRectangle(ix-2, iy-6, 2, 2, {200,72,72,255})
     }
 }
+
 
 draw_rain :: proc() {
     if g.rain_timer <= 0 { return }
@@ -12368,41 +13110,44 @@ draw_rain :: proc() {
         rl.DrawRectangle(rx, ry, 1, 6, {180, 210, 255, 120})
     }
 }
+
+world_view_rect :: proc() -> rl.Rectangle {
+    tl := rl.GetScreenToWorld2D({0, 0}, g.camera)
+    br := rl.GetScreenToWorld2D({f32(GAME_W), f32(GAME_H)}, g.camera)
+    return {tl.x - 48, tl.y - 48, (br.x - tl.x) + 96, (br.y - tl.y) + 96}
+}
+
 draw_lightning_bugs :: proc() {
     if !g.is_night { return }
 
+    view := world_view_rect()
     t := f32(rl.GetTime())
 
     for i in 0..<LIGHTNING_BUG_COUNT {
         bug := &g.lightning_bugs[i]
+        if !rl.CheckCollisionPointRec(bug.pos, view) { continue }
 
         bangle := t * 1.8 + bug.flash_time
         wx := bug.pos.x + math.cos(bangle) * 6
         wy := bug.pos.y + math.sin(bangle * 0.75) * 4
         flash := (math.sin(bug.flash_time * 3.9) + 1.0) * 0.5
-        bright_r := u8(220)
-        bright_g := u8(255)
-        bright_b := u8(0)
-        dim_r    := u8(30)
-        dim_g    := u8(50)
-        dim_b    := u8(0)
-        r := u8(f32(dim_r) + flash * f32(bright_r - dim_r))
-        gv := u8(f32(dim_g) + flash * f32(bright_g - dim_g))
-        b := u8(f32(dim_b) + flash * f32(bright_b - dim_b))
+
+        r  := u8(30.0  + flash * 190.0)
+        gv := u8(50.0  + flash * 205.0)
+        b  := u8(0)
         body_col := rl.Color{r, gv, b, 255}
-        glow_alpha := u8(flash * 80)
-        glow_col   := rl.Color{220, 255, 0, glow_alpha}
-        rl.DrawCircle(pxi(wx), pxi(wy), 6, glow_col)
-        glow2_alpha := u8(flash * 140)
-        glow2_col   := rl.Color{240, 255, 60, glow2_alpha}
-        rl.DrawCircle(pxi(wx), pxi(wy), 3, glow2_col)
+
+        rl.DrawCircle(pxi(wx), pxi(wy), 6, rl.Color{220, 255, 0,  u8(flash * 80.0)})
+        rl.DrawCircle(pxi(wx), pxi(wy), 3, rl.Color{240, 255, 60, u8(flash * 140.0)})
         rl.DrawRectangle(pxi(wx)-1, pxi(wy)-1, 2, 2, body_col)
-        wing_alpha := u8(60 + u8(flash * 80))
-        wing_col   := rl.Color{200, 230, 255, wing_alpha}
+
+        wing_col := rl.Color{200, 230, 255, u8(60.0 + flash * 80.0)}
         rl.DrawRectangle(pxi(wx)-3, pxi(wy)-2, 2, 2, wing_col)
         rl.DrawRectangle(pxi(wx)+1, pxi(wy)-2, 2, 2, wing_col)
     }
 }
+
+
 draw_soccer :: proc() {
     sg := &g.soccer
     fw := SOCCER_FIELD_W
@@ -13765,16 +14510,30 @@ draw_help_menu :: proc() {
 draw_world :: proc() {
     rl.BeginMode2D(g.camera)
 
-    for ty := -2800; ty < 2800; ty += 16 {
-        for tx := -2800; tx < 2800; tx += 16 {
-            base := COL_GRASS if ((tx/16)+(ty/16))%2==0 else rl.Color{64,96,28,255}
-            col: rl.Color
-            if g.is_night {
-                col = rl.Color{base.r/3, base.g/3, base.b/3+20, 255}
-            } else {
-                col = base
-            }
-            rl.DrawRectangle(i32(tx), i32(ty), 16, 16, col)
+    view_tl := rl.GetScreenToWorld2D({0, 0}, g.camera)
+    view_br := rl.GetScreenToWorld2D({f32(GAME_W), f32(GAME_H)}, g.camera)
+
+    tile :: 16
+    gx0 := floor_div(i32(math.floor(view_tl.x)), tile) * tile - tile
+    gy0 := floor_div(i32(math.floor(view_tl.y)), tile) * tile - tile
+    gx1 := floor_div(i32(math.ceil(view_br.x)),  tile) * tile + tile
+    gy1 := floor_div(i32(math.ceil(view_br.y)),  tile) * tile + tile
+
+    gx0 = max(gx0, -2800); gy0 = max(gy0, -2800)
+    gx1 = min(gx1,  2800); gy1 = min(gy1,  2800)
+
+    col_a := COL_GRASS
+    col_b := rl.Color{64, 96, 28, 255}
+    if g.is_night {
+        col_a = rl.Color{col_a.r/3, col_a.g/3, col_a.b/3 + 20, 255}
+        col_b = rl.Color{col_b.r/3, col_b.g/3, col_b.b/3 + 20, 255}
+    }
+
+    for ty := gy0; ty < gy1; ty += tile {
+        for tx := gx0; tx < gx1; tx += tile {
+            parity := (floor_div(tx, tile) + floor_div(ty, tile)) & 1
+            col := col_a if parity == 0 else col_b
+            rl.DrawRectangle(tx, ty, tile, tile, col)
         }
     }
 
@@ -13810,8 +14569,6 @@ draw_world :: proc() {
 
     if g.bee_cam_active {
 	draw_bee_cam_player()
-    } else {
-	draw_player()
     }
     draw_cars()
     draw_player()
@@ -14069,6 +14826,11 @@ main :: proc() {
         }
 
 	draw_death_overlay()
+
+	ms := rl.GetFrameTime() * 1000
+	rl.DrawText(strings.clone_to_cstring(
+	    fmt.aprintf("%.2f ms", ms, allocator = context.temp_allocator),
+	    context.temp_allocator), GAME_W - 90, 4, 8, COL_HONEY)
 
         rl.EndTextureMode()
 

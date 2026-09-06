@@ -329,6 +329,8 @@ net_shutdown :: proc() {
     delete(world_sync_buf.data)
     world_sync_buf = World_Sync_Buffer{}
     net_state = Net_State{}
+    friend_follow_end()
+
 }
 
 net_update :: proc() {
