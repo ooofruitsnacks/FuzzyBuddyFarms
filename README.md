@@ -40,7 +40,7 @@ You spawn into Honeyville with a small plot of land to get started. The starting
 | macOS (Apple Silicon / M series) | `Fuzzy_Buddy_Farms-macos-arm64.zip` |
 | macOS (Intel) | `Fuzzy_Buddy_Farms-macos-amd64.zip` |
 | Linux (64bit / Intel or AMD) | `Fuzzy_Buddy_Farms-linux-amd64.zip` |
-| Linux ARM64 (Raspberry Pi 3/4/5/400) | `Fuzzy_Buddy_Farms-linux-arm64.zip` |
+| Linux ARM64 (Raspberry Pi 3/4/5/400/500/500+) | `Fuzzy_Buddy_Farms-linux-arm64.zip` |
 
 __Go to the release section of FuzzyBuddyFarms__
 
