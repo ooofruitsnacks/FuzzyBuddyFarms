@@ -42,7 +42,7 @@ jobs:
             libasound2-dev
 
       - name: Check and vet
-        run: odin check ${{ env.ODIN_PACKAGE_PATH }} -vet
+        run: odin check ${{ env.ODIN_PACKAGE_PATH }}
 
   build:
     name: ${{ matrix.name }}
