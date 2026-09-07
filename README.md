@@ -15,8 +15,8 @@
 ![Badge](https://img.shields.io/badge/macOS(silicon/m_series)-green)
 ![Badge](https://img.shields.io/badge/Ubuntu-green)
 ![Badge](https://img.shields.io/badge/Kubuntu-green)
-![Badge](https://img.shields.io/badge/Debian_11-yellow)
-![Badge](https://img.shields.io/badge/Debian_12-green)
+![Badge](https://img.shields.io/badge/Debian_11-orange)
+![Badge](https://img.shields.io/badge/Debian_12-yellow)
 ![Badge](https://img.shields.io/badge/Debian_13+-green)
 ![Badge](https://img.shields.io/badge/Fedora-green)
 ![Badge](https://img.shields.io/badge/Nobara-green)
@@ -26,15 +26,17 @@
 ![Badge](https://img.shields.io/badge/SteamOS-green)
 ![Badge](https://img.shields.io/badge/Raspberry_Pi_OS-green)
 ![Badge](https://img.shields.io/badge/32_bit_RASPI_OS-red)
-![Badge](https://img.shields.io/badge/NIXos-orange)
-![Badge](https://img.shields.io/badge/Alpine-red)
+![Badge](https://img.shields.io/badge/NIXos-red)
+![Badge](https://img.shields.io/badge/Alpine-orange)
+![Badge](https://img.shields.io/badge/Arduino-pink)
 
 __COLOR CODING INDEX__
 
-![[Badge](https://img.shields.io/badge/Not_Maintained-yellow)
-![[Badge](https://img.shields.io/badge/Under_Work-orange)
-![[Badge](https://img.shields.io/badge/Not_Supported-red)
-![[Badge](https://img.shields.io/badge/Supported-green)
+![Badge](https://img.shields.io/badge/%20Maintained%20-green)
+![Badge](https://img.shields.io/badge/Not%20Maintained%20-yellow)
+![Badge](https://img.shields.io/badge/Under%20Work%20-orange)
+![Badge](https://img.shields.io/badge/Not%20Supported%20-red)
+![Badge](https://img.shields.io/badge/Future%20Support%20-pink)
 
 </div>
 
