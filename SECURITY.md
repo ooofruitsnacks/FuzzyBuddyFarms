@@ -1,10 +1,13 @@
 # Security Policy
 
-FuzzyBuddyFarms is an open-source, solo-developed project. Security and transparency are taken seriously, and reports of any kind are welcomed and will be addressed promptly.
+Fuzzy Buddy Farms is an open-source solo-developed project. Security and transparency is still taken very seriously and reports of any kind will be addressed promptly.
+
+>[!TIP]
+>CHECK THE CHECKSUMS.TXT FILE WITH YOUR RELEASE ZIP FILE BEFORE RUNNING THE PROGRAM TO VERIFY THE SHA256 FINGERPRINTING. THIS IS DONE AS A SAFETY LAYER FOR USERS.
 
 ## Supported Versions
 
-Only the latest tagged release available on the [Releases](https://github.com/oooFruitSnacks/FuzzyBuddyFarms/releases) page is actively supported with security fixes. Older releases will not receive patches — please always download or build from the latest version.
+Only the latest tagged release available on the [Releases](https://github.com/oooFruitSnacks/FuzzyBuddyFarms/releases) page is actively supported with security fixes. Older releases will not receive patches — please always download or build from the latest release version. Thank you.
 
 | Version         | Supported          |
 | ---------------- | ------------------ |
@@ -14,7 +17,7 @@ Only the latest tagged release available on the [Releases](https://github.com/oo
 
 ## Reporting a Vulnerability
 
-If you discover a security concern — whether in the game's source code, a build artifact, the GitHub Actions release pipeline, or anywhere else in this repository — please report it privately rather than opening a public GitHub issue, so it can be addressed before any details are made public.
+If you discover a security concern — whether in the game's source code, the GitHub Actions release pipeline, or anywhere else in this repository — please report it privately rather than opening a public issue so it can be addressed before any details are made public to prevent further exploitation before a patch can get pushed. 
 
 **Contact:** `467487@pm.me`
 
@@ -42,11 +45,13 @@ This policy covers:
 - Official release artifacts published under this repository's [Releases](https://github.com/oooFruitSnacks/FuzzyBuddyFarms/releases) page
 - Packaging files under `packaging/`
 
-This policy does **not** cover third-party dependencies directly (e.g. the Odin compiler/toolchain itself, or the Raylib library FuzzyBuddyFarms is built on) — please report issues in those projects to their respective maintainers. However, if you believe a dependency issue directly affects FuzzyBuddyFarms specifically, feel free to reach out anyway and it will be looked into.
+This policy does **not** cover third-party dependencies directly (e.g. the Odin compiler/toolchain itself, or the Raylib library FuzzyBuddyFarms is built on) — please report issues in those projects to their respective maintainers. However, if you believe a dependency issue directly affects FuzzyBuddyFarms specifically, feel free to reach out anyway and it will be looked into. Always validate the sha256 fingerprint with the ```checksums.txt``` file and the sha256 fingerprint in the release of the zip folder you wish to download. If both sha256 checksums don't match, delete the file immediately and report. 
 
 ## A Note on Unsigned Binaries
 
-FuzzyBuddyFarms release binaries (Windows, macOS, and Linux) are **not code-signed**, since this requires a paid certificate that isn't currently part of this project's budget as a solo, open-source effort. As a result:
+Fuzzy Buddy Farms release binaries (Windows, macOS, and Linux) are **not code-signed** since that requires a paid certificate that isn't my biggest concern for now lol. I do my best to make it safe for everyone to play.
+
+Don't be alarmed if you see:
 
 - **Windows** may show a "Windows protected your PC" SmartScreen warning
 - **macOS** may show an "unidentified developer" or similar Gatekeeper warning
@@ -58,6 +63,4 @@ If you'd rather not rely on these warnings being safe to dismiss, you are always
 
 ## Commitment to Transparency
 
-FuzzyBuddyFarms contains no hidden trackers, telemetry, scrapers, backdoors, or other undisclosed data-collection or exploit code. All source code is public and open for review at any time — reading through it yourself is genuinely encouraged, not just tolerated.
-
-If a legitimate vulnerability is ever discovered and confirmed, an immediate notice will be published (via a GitHub Release note and/or repository announcement) alongside the fix, so users are never left unaware of a real risk.
+FuzzyBuddyFarms contains no hidden trackers, telemetry, scrapers, backdoors, or other undisclosed data-collection or exploit code. All source code is public and open for review at any time. Reading through it yourself is genuinely encouraged! If a legitimate vulnerability is ever discovered and confirmed, an immediate notice will be published (via a GitHub Release note and/or repository announcement) alongside the fix, so users are never left unaware of a real risk.
