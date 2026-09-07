@@ -16,39 +16,68 @@ permissions:
   contents: write
 
 jobs:
+  check:
+    name: Vet / Check
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Odin
+        uses: laytan/setup-odin@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release: latest
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
+            libasound2-dev
+
+      - name: Check and vet
+        run: odin check ${{ env.ODIN_PACKAGE_PATH }} -vet
+
   build:
     name: ${{ matrix.name }}
+    needs: check
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            name: Linux (amd64)
+          - os: ubuntu-24.04
+            name: Linux (amd64 — glibc 2.39+)
             target: linux_amd64
             output: Fuzzy_Buddy_Farms
             asset: Fuzzy_Buddy_Farms-linux-amd64
 
-          - os: ubuntu-latest
-            name: Linux (arm64 / Raspberry Pi)
+          - os: ubuntu-24.04-arm
+            name: Linux (arm64 — glibc 2.39+, Ubuntu 24.04 / Debian 13+)
             target: linux_arm64
             output: Fuzzy_Buddy_Farms
             asset: Fuzzy_Buddy_Farms-linux-arm64
 
           - os: windows-latest
-            name: Windows (amd64)
+            name: Windows (amd64 — Intel or AMD)
             target: windows_amd64
             output: Fuzzy_Buddy_Farms.exe
             asset: Fuzzy_Buddy_Farms-windows-amd64
 
           - os: macos-15-intel
-            name: macOS (amd64)
+            name: macOS (amd64 — Intel)
             target: darwin_amd64
             output: Fuzzy_Buddy_Farms
             asset: Fuzzy_Buddy_Farms-macos-amd64
 
           - os: macos-latest
-            name: macOS (arm64)
+            name: macOS (arm64 — Apple Silicon)
             target: darwin_arm64
             output: Fuzzy_Buddy_Farms
             asset: Fuzzy_Buddy_Farms-macos-arm64
@@ -63,8 +92,15 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           release: latest
 
+      - name: Verify Odin architecture matches runner
+        if: runner.os != 'Windows'
+        run: |
+          echo "Runner arch: $(uname -m)"
+          odin version
+          file "$(command -v odin)" || true
+
       - name: Install Linux dependencies
-        if: matrix.target == 'linux_amd64'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -76,66 +112,17 @@ jobs:
             libgl1-mesa-dev \
             libasound2-dev
 
-      - name: Install ARM64 cross-compilation tools
-        if: matrix.target == 'linux_arm64'
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
         run: |
-          set -e
-          sudo dpkg --add-architecture arm64
-          CODENAME=$(lsb_release -cs)
+          odin build ${{ env.ODIN_PACKAGE_PATH }} \
+            -out:${{ matrix.output }} \
+            -target:${{ matrix.target }} \
+            -o:speed \
+            -extra-linker-flags:"-rpath @executable_path/../Frameworks -rpath @executable_path"
 
-          sudo sed -i 's/^deb \([^[]\)/deb [arch=amd64] \1/' /etc/apt/sources.list || true
-          sudo sed -i 's/^deb-src \([^[]\)/deb-src [arch=amd64] \1/' /etc/apt/sources.list || true
-
-          for f in /etc/apt/sources.list.d/*.sources; do
-            [ -e "$f" ] || continue
-            if ! grep -q '^Architectures:' "$f"; then
-              sudo sed -i '/^Signed-By:/i Architectures: amd64' "$f" || true
-            fi
-          done
-          for f in /etc/apt/sources.list.d/*.list; do
-            [ -e "$f" ] || continue
-            sudo sed -i 's/^deb \([^[]\)/deb [arch=amd64] \1/' "$f" || true
-          done
-
-          sudo tee /etc/apt/sources.list.d/arm64-ports.sources > /dev/null <<EOF
-          Types: deb
-          URIs: http://ports.ubuntu.com/ubuntu-ports
-          Suites: ${CODENAME} ${CODENAME}-updates ${CODENAME}-security ${CODENAME}-backports
-          Components: main restricted universe multiverse
-          Architectures: arm64
-          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-          EOF
-
-          sudo apt-get update
-
-          sudo apt-get install -y \
-            lld \
-            gcc-aarch64-linux-gnu \
-            g++-aarch64-linux-gnu \
-            libc6-dev-arm64-cross \
-            libx11-dev:arm64 \
-            libgcc-s1:arm64 \
-            libstdc++6:arm64 \
-            libxrandr-dev:arm64 \
-            libxinerama-dev:arm64 \
-            libxcursor-dev:arm64 \
-            libxi-dev:arm64 \
-            libgl1-mesa-dev:arm64 \
-            libasound2-dev:arm64
-
-      - name: Build (Linux arm64 cross-compile)
-        if: matrix.target == 'linux_arm64'
-        run: |
-          set -e
-          GCC_DIR=$(dirname $(aarch64-linux-gnu-gcc -print-libgcc-file-name))
-          echo "Using GCC cross dir: $GCC_DIR"
-          odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed \
-            -extra-linker-flags:"-fuse-ld=lld --target=aarch64-linux-gnu -B${GCC_DIR} -L${GCC_DIR} -L/usr/lib/aarch64-linux-gnu -L/usr/aarch64-linux-gnu/lib -L/lib/aarch64-linux-gnu"
-
-
-
-      - name: Build
-        if: matrix.target != 'linux_arm64'
+      - name: Build (Linux / Windows)
+        if: runner.os != 'macOS'
         run: odin build ${{ env.ODIN_PACKAGE_PATH }} -out:${{ matrix.output }} -target:${{ matrix.target }} -o:speed
 
       - name: Stage release folder (Linux)
@@ -150,15 +137,51 @@ jobs:
       - name: Bundle .app (macOS)
         if: runner.os == 'macOS'
         run: |
+          set -euo pipefail
           APP="release/${{ matrix.asset }}/Fuzzy_Buddy_Farms.app"
           mkdir -p "$APP/Contents/MacOS"
           mkdir -p "$APP/Contents/Resources"
+          mkdir -p "$APP/Contents/Frameworks"
+
           cp ${{ matrix.output }} "$APP/Contents/MacOS/"
           cp packaging/macos/Info.plist "$APP/Contents/Info.plist"
           cp packaging/macos/icon.icns "$APP/Contents/Resources/"
           cp -r assets "$APP/Contents/Resources/"
           chmod +x "$APP/Contents/MacOS/Fuzzy_Buddy_Farms"
+
+          # Copy any dynamically-linked raylib next to the binary so the .app
+          # works on Macs that don't have Odin installed.
+          echo "--- Linked libraries before fixup ---"
+          otool -L "$APP/Contents/MacOS/Fuzzy_Buddy_Farms"
+
+          ODIN_BIN="$(command -v odin)"
+          ODIN_DIR="$(dirname "$(readlink -f "$ODIN_BIN" || echo "$ODIN_BIN")")"
+          for DYLIB in $(otool -L "$APP/Contents/MacOS/Fuzzy_Buddy_Farms" \
+                          | awk '/raylib|\.dylib/ {print $1}' \
+                          | grep -v '^/usr/lib' \
+                          | grep -v '^/System' || true); do
+            BASE="$(basename "$DYLIB")"
+            SRC=""
+            if [ -f "$DYLIB" ]; then
+              SRC="$DYLIB"
+            else
+              SRC="$(find "$ODIN_DIR/vendor/raylib" -name "$BASE" -print -quit 2>/dev/null || true)"
+            fi
+            if [ -n "$SRC" ] && [ -f "$SRC" ]; then
+              echo "Bundling $BASE from $SRC"
+              cp "$SRC" "$APP/Contents/Frameworks/"
+              install_name_tool -change "$DYLIB" "@rpath/$BASE" \
+                "$APP/Contents/MacOS/Fuzzy_Buddy_Farms"
+            else
+              echo "NOTE: could not locate $BASE — assuming static link"
+            fi
+          done
+
+          echo "--- Linked libraries after fixup ---"
+          otool -L "$APP/Contents/MacOS/Fuzzy_Buddy_Farms"
+
           codesign --force --deep --sign - "$APP"
+
           cd release
           zip -r ${{ matrix.asset }}.zip "${{ matrix.asset }}"
 
@@ -177,9 +200,99 @@ jobs:
           name: ${{ matrix.asset }}
           path: release/${{ matrix.asset }}.zip
 
+  build-raspberry-pi:
+    name: Raspberry Pi OS (arm64 — Debian 12 / glibc 2.36)
+    needs: check
+    runs-on: ubuntu-24.04-arm
+    continue-on-error: true
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build inside Debian 12 arm64 container
+        run: |
+          set -euo pipefail
+          docker run --rm --platform linux/arm64 \
+            -v "$PWD:/src" -w /src \
+            debian:12 bash -euo pipefail -c '
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                curl unzip ca-certificates clang \
+                libx11-dev libxrandr-dev libxinerama-dev \
+                libxcursor-dev libxi-dev libgl1-mesa-dev libasound2-dev
+
+              curl -fL -o /tmp/odin.zip \
+                https://github.com/odin-lang/Odin/releases/latest/download/odin-linux-arm64-nightly.zip
+              mkdir -p /opt/odin
+              unzip -q /tmp/odin.zip -d /opt/odin
+              ODIN=$(find /opt/odin -maxdepth 2 -name odin -type f | head -1)
+              chmod +x "$ODIN"
+              "$ODIN" version
+
+              "$ODIN" build . -out:Fuzzy_Buddy_Farms -o:speed
+            '
+
+      - name: Verify glibc floor
+        run: |
+          echo "Highest glibc symbol version required by the binary:"
+          objdump -T ${{ env.BINARY_NAME }} | grep -o 'GLIBC_[0-9.]\+' | sort -uV | tail -1
+          echo "(Must be 2.36 or lower to run on Raspberry Pi OS Bookworm)"
+
+      - name: Stage release folder
+        run: |
+          set -euo pipefail
+          DIR=release/Fuzzy_Buddy_Farms-raspberrypi-arm64
+          mkdir -p "$DIR"
+          cp ${{ env.BINARY_NAME }} "$DIR/"
+          cp -r assets "$DIR/"
+          cp packaging/raspberrypi/RUN_ME.sh "$DIR/"
+          chmod +x "$DIR/RUN_ME.sh"
+          cp packaging/raspberrypi/FuzzyBuddyFarms.desktop "$DIR/"
+          chmod +x "$DIR/FuzzyBuddyFarms.desktop"
+          chmod +x "$DIR/${{ env.BINARY_NAME }}"
+
+          cat > "$DIR/README.txt" <<'EOF'
+          Fuzzy Buddy Farms — Raspberry Pi (arm64)
+          ========================================
+
+          START THE GAME:
+
+              ./RUN_ME.sh
+
+          Do NOT run ./Fuzzy_Buddy_Farms directly — it will crash.
+
+          WHY: The Raspberry Pi's GPU reports OpenGL 3.1, but the game's
+          graphics library requests 3.3. RUN_ME.sh sets an environment
+          variable that tells the driver to advertise 3.3, which works
+          because the hardware supports the features actually used.
+
+          If the game window never appears, install the runtime libraries:
+
+              sudo apt update
+              sudo apt install -y libx11-6 libxrandr2 libxinerama1 \
+                libxcursor1 libxi6 libgl1 libasound2t64
+
+          Requires 64-bit Raspberry Pi OS. Check with:  uname -m
+          It must print "aarch64" (not "armv7l").
+
+          Report issues:
+          https://github.com/oooFruitSnacks/FuzzyBuddyFarms/issues
+          EOF
+
+          cd release
+          zip -r Fuzzy_Buddy_Farms-raspberrypi-arm64.zip Fuzzy_Buddy_Farms-raspberrypi-arm64
+
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fuzzy_Buddy_Farms-raspberrypi-arm64
+          path: release/Fuzzy_Buddy_Farms-raspberrypi-arm64.zip
+
   release:
     name: Create Release
-    needs: build
+    needs: [ build, build-raspberry-pi ]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:

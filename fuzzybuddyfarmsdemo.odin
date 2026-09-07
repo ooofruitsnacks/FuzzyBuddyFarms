@@ -1,4 +1,4 @@
-// FuzzyBuddyFarms beta demo v.0.2.6
+// FuzzyBuddyFarms beta demo v.0.2.9
 // an open source game created by Owen Edwards | ACS "a creative solution"
 // for everyone to enjoy :) work in progress
 package main
@@ -633,6 +633,7 @@ LandPlot :: struct {
     cost:            f32,
     owned:           bool,
     owner_is_player: bool,
+    owner_id: u32,
     trees:           [dynamic]Vec2,
     flowers:         [dynamic]Vec2,
     boxes:           [dynamic]int,
@@ -1264,16 +1265,20 @@ apply_deploy_queen :: proc(requester_pos: Vec2) -> (ok: bool, msg: string) {
     return true, fmt.aprintf("Queen bee deployed! +50%d honey boost on this hive.", g.inv_queen_bees, allocator = context.temp_allocator)
 }
 
-apply_buy_plot :: proc(plot_idx: int) -> (ok: bool, msg: string) {
-    if plot_idx < 0 || plot_idx >= len(g.plots) { return false, "Invalid plot." }
-    plot := &g.plots[plot_idx]
+apply_buy_plot :: proc(plot_index: int, buyer_id: u32) -> (bool, string) {
+    if plot_index < 0 || plot_index >= len(g.plots) { return false, "Invalid plot." }
+    plot := &g.plots[plot_index]
     if plot.owned { return false, "Already owned." }
     if g.player.money < plot.cost { return false, "Not enough money!" }
     g.player.money -= plot.cost
-    plot.owned = true; plot.owner_is_player = true
-    if g.player.owned_plot < 0 { g.player.owned_plot = plot_idx }
+
+    plot.owned           = true
+    plot.owner_id        = buyer_id
+    plot.owner_is_player = (buyer_id == net_state.local_id)
+
+    if plot.owner_is_player && g.player.owned_plot < 0 { g.player.owned_plot = plot_index }
     build_collision_rects()
-    unlock_achievement(ACH_BOUGHT_PLOT)
+    if plot.owner_is_player { unlock_achievement(ACH_BOUGHT_PLOT) }
     return true, fmt.aprintf("Purchased %s at %s!", plot_size_label(plot.size), plot.address, allocator = context.temp_allocator)
 }
 
@@ -3528,6 +3533,20 @@ update_camera :: proc() {
     }
 }
 
+update_npcs_client_interp :: proc() {
+    dt := g.dt
+    for i in 0..<NPC_COUNT {
+        npc := &g.npcs[i]
+        dir := Vec2{npc.target.x - npc.pos.x, npc.target.y - npc.pos.y}
+        d   := math.sqrt(dir.x*dir.x + dir.y*dir.y)
+        if d > 4 {
+            npc.pos = Vec2{
+                npc.pos.x + (dir.x/d) * NPC_SPEED * dt,
+                npc.pos.y + (dir.y/d) * NPC_SPEED * dt,
+            }
+        }
+    }
+}
 
 update_npcs :: proc() {
     dt := g.dt
@@ -6898,6 +6917,8 @@ update_world :: proc() {
 
     if net_state.role != .Client {
         update_npcs()
+    } else {
+	update_npcs_client_interp()
     }
     update_environment()
     update_festival(g.dt)
@@ -7436,7 +7457,7 @@ handle_land_menu :: proc() {
             net_request_plot_action(idx, .BuyPlot, g.player.pos)
             close_menu()
         } else {
-            ok, msg := apply_buy_plot(idx)
+            ok, msg := apply_buy_plot(idx, net_state.local_id)
             show_message(msg)
             if ok {
                 if net_state.role == .Host { net_broadcast_world_snapshot() }

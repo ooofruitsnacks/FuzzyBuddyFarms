@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Fuzzy Buddy Farms
+Comment=Cozy farming game
+Exec=sh -c 'cd "$(dirname "%k")" && ./RUN_ME.sh'
+Icon=fuzzybuddyfarms
+Terminal=false
+Categories=Game;Simulation;
+

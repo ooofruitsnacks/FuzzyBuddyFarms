@@ -9,7 +9,7 @@ import rl "vendor:raylib"
 NET_PROTOCOL_VERSION :: u32(1)
 NET_MAX_PLAYERS       :: 8
 NET_PORT_DEFAULT      :: 7777
-NET_PACKET_BUF_SIZE   :: 512
+NET_PACKET_BUF_SIZE   :: 1400
 NET_SEND_RATE         :: f32(0.05)
 NET_TIMEOUT_SECONDS   :: f32(5.0)
 
@@ -19,11 +19,13 @@ NET_JOIN_MIN_INTERVAL    :: f32(1)
 NET_MAX_PACKETS_PER_SEC  :: 40
 
 NET_ADDRESS_LEN     :: 24
-NET_CHUNK_DATA_SIZE :: 400
+NET_CHUNK_DATA_SIZE :: 1200
 NET_ACTION_MSG_LEN  :: 64
 NET_ID_UNASSIGNED :: u32(0xFFFF_FFFF)
 NET_START_ANNOUNCE_SECONDS :: f32(3.0)
 NET_START_ANNOUNCE_RATE    :: f32(0.25)
+NET_MAX_PLOT_TREES   :: 24
+NET_MAX_PLOT_FLOWERS :: 40
 
 Net_Role :: enum { None, Host, Client }
 
@@ -90,9 +92,11 @@ Net_Plot :: struct {
     size:            PlotSize,
     cost:            f32,
     owned:           bool,
-    owner_is_player: bool,
+    owner_id:        u32,
     tree_count:      int,
     flower_count:    int,
+    trees:           [NET_MAX_PLOT_TREES][2]f32,
+    flowers:         [NET_MAX_PLOT_FLOWERS][2]f32,
     address:         [NET_ADDRESS_LEN]u8,
     address_len:     int,
 }
@@ -115,6 +119,7 @@ Net_Building :: struct {
 
 Net_NPC :: struct {
     pos:      [2]f32,
+    target:   [2]f32,
     facing:   f32,
     state:    u8,
     in_building: bool,
@@ -130,6 +135,7 @@ World_Snapshot_Header :: struct {
     plot_count:     int,
     beebox_count:   int,
     building_count: int,
+    npc_count:      int,
 }
 
 WorldSync_Start_Packet :: struct {
@@ -447,7 +453,7 @@ net_update :: proc() {
     if net_state.role == .Host {
         net_state.world_sync_timer -= g.dt
         if net_state.world_sync_timer <= 0 {
-            net_state.world_sync_timer = 2.0
+            net_state.world_sync_timer = 0.5
             net_broadcast_world_snapshot()
         }
     }
@@ -532,9 +538,6 @@ net_handle_packet :: proc(pkt: Packet, from: net.Endpoint) {
         net_state.local_id = pkt.player.id
 
     case .StartGame:
-        // Only act while still sitting in the lobby, so a late or
-        // duplicate announcement can't teleport an in-game client
-        // back to spawn.
         if net_state.role == .Client && g.state == .MultiplayerLobby {
             net_client_begin_session()
         }
@@ -671,22 +674,28 @@ net_send_world_snapshot :: proc(to: net.Endpoint) {
     beebox_count   := len(g.bee_boxes)
     building_count := len(g.buildings)
 
-    total := plot_count*size_of(Net_Plot) + beebox_count*size_of(Net_BeeBox) + building_count*size_of(Net_Building)
+    total := plot_count*size_of(Net_Plot) + beebox_count*size_of(Net_BeeBox) + building_count*size_of(Net_Building) + NPC_COUNT*size_of(Net_NPC)
     buf := make([dynamic]u8, 0, total)
     defer delete(buf)
 
     for p in g.plots {
+        tc := min(len(p.trees),   NET_MAX_PLOT_TREES)
+        fc := min(len(p.flowers), NET_MAX_PLOT_FLOWERS)
         np := Net_Plot{
             rect = {p.rect.x, p.rect.y, p.rect.width, p.rect.height},
-            size = p.size, cost = p.cost, owned = p.owned, owner_is_player = p.owner_is_player,
-            tree_count = len(p.trees), flower_count = len(p.flowers),
+            size = p.size, cost = p.cost, owned = p.owned, owner_id = p.owner_id,
+            tree_count = tc, flower_count = fc,
         }
+        for t in 0..<tc { np.trees[t]   = {p.trees[t].x,   p.trees[t].y}   }
+        for f in 0..<fc { np.flowers[f] = {p.flowers[f].x, p.flowers[f].y} }
+
         alen := min(len(p.address), NET_ADDRESS_LEN)
         np.address_len = alen
         copy(np.address[:alen], transmute([]u8)p.address[:alen])
         b := transmute([size_of(Net_Plot)]u8)np
         append(&buf, ..b[:])
     }
+
     for bb in g.bee_boxes {
         nb := Net_BeeBox{
             pos = {bb.pos.x, bb.pos.y}, kind = bb.kind, honey_ml = bb.honey_ml,
@@ -701,12 +710,20 @@ net_send_world_snapshot :: proc(to: net.Endpoint) {
         b := transmute([size_of(Net_Building)]u8)nbld
         append(&buf, ..b[:])
     }
+    for i in 0..<NPC_COUNT {
+        nn := Net_NPC{
+            pos    = {g.npcs[i].pos.x,    g.npcs[i].pos.y},
+            target = {g.npcs[i].target.x, g.npcs[i].target.y},
+        }
+        b := transmute([size_of(Net_NPC)]u8)nn
+        append(&buf, ..b[:])
+    }
 
     header := World_Snapshot_Header{
         day_time = g.day_time, is_night = g.is_night,
         season_time = g.season_time, season = g.season,
         rain_timer = g.rain_timer, rain_cooldown = g.rain_cooldown,
-        plot_count = plot_count, beebox_count = beebox_count, building_count = building_count,
+        plot_count = plot_count, beebox_count = beebox_count, building_count = building_count, npc_count = NPC_COUNT,
     }
     start := WorldSync_Start_Packet{kind = .WorldSyncStart, proto_ver = NET_PROTOCOL_VERSION,
         total_bytes = len(buf), header = header}
@@ -780,25 +797,27 @@ net_on_world_sync_end :: proc() {
         g.plots[i].size            = np.size
         g.plots[i].cost            = np.cost
         g.plots[i].owned           = np.owned
-        g.plots[i].owner_is_player = np.owner_is_player
+	g.plots[i].owner_id        = np.owner_id
+	g.plots[i].owner_is_player = np.owned && np.owner_id == net_state.local_id
         delete(g.plots[i].address)
         g.plots[i].address         = strings.clone(string(np.address[:alen]))
 
         tc := np.tree_count
         if tc < 0 { tc = 0 }
-        if tc > 4096 { tc = 4096 }
+        if tc > NET_MAX_PLOT_TREES { tc = NET_MAX_PLOT_TREES }
         clear(&g.plots[i].trees)
         for t in 0..<tc {
-            append(&g.plots[i].trees, Vec2{np.rect[0]+f32(t%4)*20+10, np.rect[1]+f32(t/4)*20+10})
+            append(&g.plots[i].trees, Vec2{np.trees[t][0], np.trees[t][1]})
         }
 
         fc := np.flower_count
         if fc < 0 { fc = 0 }
-        if fc > 4096 { fc = 4096 }
+        if fc > NET_MAX_PLOT_FLOWERS { fc = NET_MAX_PLOT_FLOWERS }
         clear(&g.plots[i].flowers)
         for f in 0..<fc {
-            append(&g.plots[i].flowers, Vec2{np.rect[0]+f32(f%5)*16+8, np.rect[1]+f32(f/5)*16+8})
+            append(&g.plots[i].flowers, Vec2{np.flowers[f][0], np.flowers[f][1]})
         }
+
     }
 
     for i in 0..<h.beebox_count {
@@ -826,6 +845,17 @@ net_on_world_sync_end :: proc() {
         off += size_of(Net_Building)
         if int(nbld.kind) < 0 || int(nbld.kind) >= len(BuildingType) { continue }
         g.buildings[nbld.kind].owned = nbld.owned
+    }
+    for i in 0..<h.npc_count {
+        if i >= NPC_COUNT { break }
+        if off + size_of(Net_NPC) > len(world_sync_buf.data) { return }
+        raw: [size_of(Net_NPC)]u8
+        copy(raw[:], world_sync_buf.data[off:off+size_of(Net_NPC)])
+        nn := transmute(Net_NPC)raw
+        off += size_of(Net_NPC)
+
+        g.npcs[i].pos    = Vec2{nn.pos[0],    nn.pos[1]}
+        g.npcs[i].target = Vec2{nn.target[0], nn.target[1]}
     }
 
     for i in 0..<len(g.plots) { clear(&g.plots[i].boxes) }
@@ -876,7 +906,7 @@ net_on_plot_action :: proc(pkt: PlotAction_Packet, from: net.Endpoint) {
     case .PlantFlower:  ok, msg = apply_plant_flower(pkt.plot_index, pos)
     case .PlantTree:    ok, msg = apply_plant_tree(pkt.plot_index, pos)
     case .DeployQueen:  ok, msg = apply_deploy_queen(pos)
-    case .BuyPlot:      ok, msg = apply_buy_plot(pkt.plot_index)
+    case .BuyPlot:      ok, msg = apply_buy_plot(pkt.plot_index, net_state.client_ids[requester_slot])
     case .CollectHoney: ok, msg = apply_collect_honey(pos)
     case .PlaceBox:     ok, msg = apply_place_box(pkt.plot_index, pkt.box_kind)
     case .BuyBuilding:
