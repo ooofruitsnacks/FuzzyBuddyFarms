@@ -31,7 +31,7 @@ https://github.com/user-attachments/assets/7fbb42ac-bae3-456c-bd60-c6c6c5f8df02
 | Manjaro | [Manjaro](#manjaro) |
 | Gentoo | [Gentoo](#gentoo) |
 | SteamOS / Steam Deck | [SteamOS](#steamos--steam-deck) |
-| Raspberry Pi OS | [Raspberry Pi](#linux-arm64aarch64) |
+| Raspberry Pi OS | [Raspberry Pi OS](#raspberry-pi-os) |
 
 ## How to play :honeybee:
 
@@ -224,7 +224,7 @@ __Pick your desired distro__
 | Manjaro | [Manjaro](#manjaro) |
 | Gentoo | [Gentoo](#gentoo) |
 | SteamOS / Steam Deck | [SteamOS](#steamos--steam-deck) |
-| Raspberry Pi OS | [Raspberry Pi](#linux-arm64aarch64) |
+| Raspberry Pi OS | [Raspberry Pi OS](#raspberry-pi-os) |
 
 ### Linux troubleshooting (all distributions)
 
@@ -305,16 +305,7 @@ chmod +x Fuzzy_Buddy_Farms
 
 Or make it executable from your file manager by right-clicking it → Properties → Permissions → "Allow executing file as program" (steps vary slightly by desktop environment), so you can double-click to launch the program.
 
-
 ## Linux (arm64/aarch64)
-
-First confirm the OS you are running is a 64bit version with:
-
-```
-uname -m
-```
-
-If ```aarch64``` is printed back you are good to move onto the next step, if ```armv7l``` is returned then you are using a 32bit OS and you will need to reinstall the 64bit image. You can also target linux_arm32 instead with the flag ```-target=linux_arm32``` to try and cross compile but cross compilation can be finicky with Odin.
 
 Install Clang and system libraries
 
@@ -342,7 +333,7 @@ or
 
 Please visit ``` https://odin-lang.org/docs/install/ ``` to install the Odin language if you have any issues.
 
-If there are no amr64 releases available, build the compiler from source with:
+If there are no arm64 releases available, build the compiler from source with:
 
 ```
 sudo apt install -y llvm llvm-dev git-lfs
@@ -355,48 +346,24 @@ echo 'export PATH="$HOME/Odin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-If your ```LLVM``` is outdated please update to the latest release, Odin supports versions 17-22. Please be aware this will take some time to update on Pi hardware so if you don't see anything happen or update for awhile DO NOT START BUTTON MASHING thank you.
-
-Once that has all been installed, run:
+If your ```LLVM``` is outdated please update to the latest release, Odin supports versions 17-22. Once that has all been installed, run:
 
 ```
-git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
+git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms
 cd FuzzyBuddyFarms
 ```
 
-Now build an executable:
-
-```
-odin build . -out:Fuzzy_Buddy_Farms -o:speed
-```
-__No target flag is needed when building on a Raspberry Pi, Odin will default to the host architecture.__
-
-Now run:
+After the repo has been cloned, run:
 
 ```
 chmod +x Fuzzy_Buddy_Farms
 ./Fuzzy_Buddy_Farms
 ```
 
-If it fails to run, install the runtime counterparts and then try again:
-
-```
-sudo apt install -y libx11-6 libxrandr2 libxinerama1 libxcursor1 libxi6 libgl1 libasound2t64
-```
-
-Alternatively if that doesn't work try:
+If it fails to run, try:
 
 ```
 MESA_GL_VERSION_OVERRIDE=3.3 ./Fuzzy_Buddy_Farms
-```
-
-or 
-
->[!WARNING]
->THIS METHOD IS VERY SLOW AND BUGGY BUT IT CAN BE USED TO CONFIRM YOU HAVE EVERYTHING INSTALLED PROPERLY TO RUN THE GAME
-
-```
-LIBGL_ALWAYS_SOFTWARE=1 ./Fuzzy_Buddy_Farms
 ```
 
 ### Fedora
@@ -703,6 +670,98 @@ Select `~/FuzzyBuddyFarms/Fuzzy_Buddy_Farms`. Then in its Properties, set **Star
 > [!NOTE]
 > The Steam Deck's AMD GPU fully supports OpenGL 3.3, so no `MESA_GL_VERSION_OVERRIDE` workaround is needed — that's only required on Raspberry Pi hardware.
 
+## Raspberry Pi OS 
+
+First confirm the OS you are running is a 64bit version with:
+
+```
+uname -m
+```
+
+If ```aarch64``` is printed back you are good to move onto the next step, if ```armv7l``` is returned then you are using a 32bit OS and you will need to reinstall the 64bit image. You can also target linux_arm32 instead with the flag ```-target=linux_arm32``` to try and cross compile but cross compilation can be finicky with Odin.
+
+Install Clang and system libraries
+
+```
+sudo apt update
+sudo apt install -y git clang \
+  libx11-dev libxrandr-dev libxinerama-dev \
+  libxcursor-dev libxi-dev libgl1-mesa-dev libasound2-dev
+```
+
+__DOWNLOAD ODIN__
+
+Install the linux arm64 release from Odin via command line:
+
+```
+cd ~
+curl -L -o odin.zip https://github.com/odin-lang/Odin/releases/latest/download/odin-linux-arm64-nightly.zip
+unzip odin.zip -d odin
+echo 'export PATH="$HOME/odin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+odin version
+```
+
+or 
+
+Please visit ``` https://odin-lang.org/docs/install/ ``` to install the Odin language if you have any issues.
+
+If there are no amr64 releases available, build the compiler from source with:
+
+```
+sudo apt install -y llvm llvm-dev git-lfs
+git clone https://github.com/odin-lang/Odin
+cd Odin
+git lfs install
+git lfs pull
+make release-native
+echo 'export PATH="$HOME/Odin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+If your ```LLVM``` is outdated please update to the latest release, Odin supports versions 17-22. Please be aware this will take some time to update on Pi hardware so if you don't see anything happen or update for awhile DO NOT START BUTTON MASHING thank you.
+
+Once that has all been installed, run:
+
+```
+git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
+cd FuzzyBuddyFarms
+```
+
+Now build an executable:
+
+```
+odin build . -out:Fuzzy_Buddy_Farms -o:speed
+```
+__No target flag is needed when building on a Raspberry Pi, Odin will default to the host architecture.__
+
+Now run:
+
+```
+chmod +x Fuzzy_Buddy_Farms
+./Fuzzy_Buddy_Farms
+```
+
+If it fails to run, install the runtime counterparts and then try again:
+
+```
+sudo apt install -y libx11-6 libxrandr2 libxinerama1 libxcursor1 libxi6 libgl1 libasound2t64
+```
+
+Alternatively if that doesn't work try:
+
+```
+MESA_GL_VERSION_OVERRIDE=3.3 ./Fuzzy_Buddy_Farms
+```
+
+or 
+
+>[!WARNING]
+>THIS METHOD IS VERY SLOW AND BUGGY BUT IT CAN BE USED TO CONFIRM YOU HAVE EVERYTHING INSTALLED PROPERLY TO RUN THE GAME
+
+```
+LIBGL_ALWAYS_SOFTWARE=1 ./Fuzzy_Buddy_Farms
+```
 ### Linux troubleshooting (all distributions)
 
 **`error while loading shared libraries: libXcursor.so.1`** — runtime libraries are missing. Install the runtime (non-`-dev`) packages for your distro.
