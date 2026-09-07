@@ -1,5 +1,9 @@
 # Welcome to Honeyville! :honey_pot: :tada: :honeybee:
 
+Please go to the Wiki section for a complete guide of the game with tips, key binds, easter eggs, and information on the story-line. A lot of time and passion has gone into this project. I hope you enjoy it! :tada:
+
+I'm the only person building this game so please be patient lol. I created FuzzyBuddyFarms because I wanted to learn Odin and because I wanted to try to build a real video game. My approach is a little different compared to other conventional video games. Everything is rendered and drawn using Raylib with vector math. This was done intentionally so anyone can play this game on any machine. You can run this game on pretty much any hardware from the past 2 decades.
+
 https://github.com/user-attachments/assets/7fbb42ac-bae3-456c-bd60-c6c6c5f8df02
 
 ## Table of Contents
@@ -11,16 +15,23 @@ https://github.com/user-attachments/assets/7fbb42ac-bae3-456c-bd60-c6c6c5f8df02
 - [Build From Source](#build-from-source)
   - [macOS (Silicon/arm64/Intel/amd64)](#macos-siliconarm64intelamd64)
   - [Windows (amd64 / intel or amd)](#windows-amd64--intel-or-amd)
-  - [Linux (amd64/aarch64)](#linux-amd64aarch64)
-  - [Linux (arm64/aarch64)](#linux-arm64aarch64)
+  - [Linux](#linux)
+    - [Linux (amd64/aarch64)](#linux-amd64aarch64)
+    - [Linux (arm64/aarch64)](#linux-arm64aarch64)
 - [License](#license)
 - [Security Policy](#security-policy)
 
+## Linux Quick Jump T.O.C.
 
-Please go to the Wiki section for a complete guide of the game with tips, key binds, easter eggs, and information on the story-line. A lot of time and passion has gone into this project. I hope you enjoy it! :tada:
-
-I'm the only person building, testing, and improving this game so please be patient lol. I created FuzzyBuddyFarms because I wanted to learn Odin and because I wanted to try to build a real video game. My approach is a little different compared to other conventional video games, the entire game consists of 1 single odin file and only 1 asset. The asset was added as an easter egg and originally I was against using assets but I made one exception. There are no shaders, physics engines, or API calls. Everything is rendered and drawn using Raylib with vector math. This was done intentionally so anyone can play this game on any machine. You can run this game on pretty much any hardware from the past 2 decades.
-
+| Distribution | Jump to |
+|---|---|
+| Debian, Ubuntu, Kubuntu, Pop!_OS, Mint | [Debian / Ubuntu family](#debian--ubuntu-family) |
+| Fedora, Nobara | [Fedora](#fedora) |
+| Arch, EndeavourOS | [Arch Linux](#arch-linux) |
+| Manjaro | [Manjaro](#manjaro) |
+| Gentoo | [Gentoo](#gentoo) |
+| SteamOS / Steam Deck | [SteamOS](#steamos--steam-deck) |
+| Raspberry Pi OS | [Raspberry Pi](#linux-arm64aarch64) |
 
 ## How to play :honeybee:
 
@@ -34,13 +45,14 @@ You spawn into Honeyville with a small plot of land to get started. The starting
 >[!NOTE]
 >FuzzyBuddyFarms will be available on steam as well!
 
-| Platform | Download |
-|---|---|
-| Windows (64bit / Intel or AMD) | `Fuzzy_Buddy_Farms-windows-amd64.zip` |
-| macOS (Apple Silicon / M series) | `Fuzzy_Buddy_Farms-macos-arm64.zip` |
-| macOS (Intel) | `Fuzzy_Buddy_Farms-macos-amd64.zip` |
-| Linux (64bit / Intel or AMD) | `Fuzzy_Buddy_Farms-linux-amd64.zip` |
-| Linux ARM64 (Raspberry Pi 3/4/5/400/500/500+) | `Fuzzy_Buddy_Farms-linux-arm64.zip` |
+| Platform | Download | Distro |
+|---|---|---|
+| Windows (64bit / Intel or AMD) | `Fuzzy_Buddy_Farms-windows-amd64.zip` | n/a |
+| macOS (Apple Silicon / M series) | `Fuzzy_Buddy_Farms-macos-arm64.zip` | n/a |
+| macOS (Intel) | `Fuzzy_Buddy_Farms-macos-amd64.zip` | n/a |
+| Linux (64bit / Intel or AMD) | `Fuzzy_Buddy_Farms-linux-amd64.zip` | Arch, Fedora, Gentoo, Manjaro, Kubuntu, SteamOS |
+| Linux ARM64 | `Fuzzy_Buddy_Farms-linux-arm64.zip` | Ubuntu, Fedora, Nobara, RaspberryPiOS - Trixie |
+| Linux ARM64 - RaspberryPi | `Fuzzy_Buddy_Farms-raspberrypi-arm64` | RaspberryPiOS (Bookworm & Trixie - optimized for Bookworm builds with outdated deps/packages. Trixie can run `Fuzzy_Buddy_Farms-linux-arm64.zip` as well. )
 
 __Go to the release section of FuzzyBuddyFarms__
 
@@ -136,24 +148,17 @@ If you run into issues downloading Odin, visit the website directly for step by 
 
 ``` https://odin-lang.org/docs/install/ ```
 
-Open your terminal and create a directory/folder for FuzzyBuddyFarms to be stored into.
+Now clone the repo.
 
 ```
-cd
-mkdir FuzzyBuddyFarms
-```
-
-Now clone the repo into that directory/folder.
-
-```
-cd FuzzyBuddyFarms
 git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
 ```
 
 Once the game has downloaded, you can build an executable version to launch as an "app". This way you don't have to open a terminal and type a command every time you want to launch the game. Run this command to build an executable. This will not build unless you have Odin installed as I mentioned earlier.
 
 ```
-odin build . -out:FUZZYBUDDYFARMS -o:speed && odin build . -out:FUZZYBUDDYFARMS -o:speed -extra-linker-flags:"-rpath @executable_path"
+cd FuzzyBuddyFarms
+odin build . -out:Fuzzy_Buddy_Farms -o:speed && odin build . -out:Fuzzy_Buddy_Farms -o:speed -extra-linker-flags:"-rpath @executable_path"
 ```
 
 Now you can either double click the icon and it will execute as a normal "app" would or you can launch it from the command line with this:
@@ -180,42 +185,74 @@ or you can grab a release from Odin directly and add the folder to your PATH. If
 
 Now run ```vcvarsall.bat x64``` from a blank developer powershell, you can search for the shortcut ```x64 Native Tools Command Prompt for VS2026``` in your ```Start Menu```. The normal windows powershell won't have the MSVC tools needed to successfully complete this operation.
 
-Open a new command prompt and create a directory/folder for FuzzyBuddyFarms to be stored into.
-
-```
-cd
-mkdir FuzzyBuddyFarms
-```
-
-Now clone the repo into that directory.
+Now clone the repo.
 
 ```
 git clone https://github.com/ooofruitsnacks/FuzzyBuddyFarms.git
+cd fuzzybuddyfarms
 ```
 
 Now within the fuzzybuddyfarms directory/folder, to create an executable version of the game run:
 
 ```
-odin build . -out:FuzzyBuddyFarms.exe -o:speed
+odin build . -out:Fuzzy_Buddy_Farms.exe -o:speed
 ```
 
-Once it finishes, you'll find ```FuzzyBuddyFarms.exe``` sitting in the folder alongside the ```assets``` directory.
+Once it finishes, you'll find ```Fuzzy_Buddy_Farms.exe``` sitting in the folder alongside the ```assets``` directory.
 
-Double-click ```Fuzzybuddyfarms.exe``` to launch the game. 
+Double-click ```Fuzzy_Buddy_Farms.exe``` to launch the game. 
 
 You can also run the game from the command line with 
 
 ```
-FuzzyBuddyFarms.exe
+Fuzzy_Buddy_Farms.exe
 ``` 
 
 >[!WARNING]
 >Don't be alarmed if windows also pops up a scary warning when you go to run the exe. This build isn't signed with a Windows code-signing certificate, Windows SmartScreen may show a "Windows protected your PC" warning the first time you launch it. Click **More info**, then **Run anyway** to proceed. This is expected for unsigned open-source software and is safe to bypass here.
 
 
-## Linux (amd64/aarch64) 
+## Linux 
 
-__Debian/Ubuntu Distros__
+__Pick your desired distro__
+
+| Distribution | Jump to |
+|---|---|
+| Debian, Ubuntu, Kubuntu, Pop!_OS, Mint | [Debian / Ubuntu family](#debian--ubuntu-family) |
+| Fedora, Nobara | [Fedora](#fedora) |
+| Arch, EndeavourOS | [Arch Linux](#arch-linux) |
+| Manjaro | [Manjaro](#manjaro) |
+| Gentoo | [Gentoo](#gentoo) |
+| SteamOS / Steam Deck | [SteamOS](#steamos--steam-deck) |
+| Raspberry Pi OS | [Raspberry Pi](#linux-arm64aarch64) |
+
+### Linux troubleshooting (all distributions)
+
+**`error while loading shared libraries: libXcursor.so.1`** — runtime libraries are missing. Install the runtime (non-`-dev`) packages for your distro.
+
+**`Permission denied`** — run `chmod +x Fuzzy_Buddy_Farms` or the command with a leading `sudo`.
+
+**Game can't find assets** — always launch from inside the repo folder, so `assets/` sits next to the binary.
+
+**`odin: command not found`** — your `PATH` change didn't take. Run `source ~/.bashrc`, or `source ~/.zshrc` if you use zsh.
+
+**`GLXBadFBConfig` / `Failed to create context`** — your GPU doesn't advertise OpenGL 3.3. Common on Raspberry Pi and very old integrated graphics. See the [Raspberry Pi](#linux-arm64aarch64) section for the `MESA_GL_VERSION_OVERRIDE=3.3` workaround.
+
+| Purpose |	Debian/Ubuntu	| Fedora |	Arch/Manjaro	| Gentoo |
+| ------- | ------------- | ------ | -------------- | ------ |
+| X11 core | libx11-dev	| libX11-devel	| libx11	| x11-libs/libX11 |
+| RandR	|libxrandr-dev	| libXrandr-devel	| libxrandr	| x11-libs/libXrandr |
+| Xinerama	| libxinerama-dev	libXinerama-devel	libxinerama	x11-libs/libXinerama
+| Cursor	| libxcursor-dev	| libXcursor-devel	| libxcursor	| x11-libs/libXcursor |
+| Input	| libxi-dev	libXi-devel	| libxi	| x11-libs/libXi |
+| OpenGL	| libgl1-mesa-dev	| mesa-libGL-devel	| mesa	| media-libs/mesa |
+| GLU	| libglu1-mesa-dev	| mesa-libGLU-devel	| glu	| media-libs/glu |
+| ALSA audio	| libasound2-dev	| alsa-lib-devel	| alsa-lib	| media-libs/alsa-lib |
+| Clang	| clang	| clang	| clang	| sys-devel/clang |
+
+## Linux (amd64/aarch64)
+
+### Debian / Ubuntu Family
 
 Please ensure you have ```Odin``` and ```Clang``` downloaded, along with a few system libraries needed for linking.
 
@@ -244,45 +281,32 @@ odin version
 Please visit ``` https://odin-lang.org/docs/install/ ``` to install the Odin language or build it from source, this is needed so you can build your release as an executable.
 
 
-Now open your terminal to create a directory/folder for FuzzyBuddyFarms to be stored into.
-
-```
-cd
-mkdir fuzzybuddyfarms
-```
-
 Now run:
 
 ```
-cd fuzzybuddyfarms
 git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
+cd FuzzyBuddyFarms
+
 ```
 
 After the game has finished cloning into the directory, run:
 
 ```
-odin build . -out:FuzzyBuddyFarms -o:speed
+odin build . -out:Fuzzy_Buddy_Farms -o:speed
 ```
 
-Once it finishes, you'll find an executable named ```FuzzyBuddyFarms``` in the folder alongside the ```assets``` directory. You can launch it directly from the terminal using:
+Once it finishes, you'll find an executable named ```Fuzzy_Buddy_Farms``` in the folder alongside the ```assets``` directory. You can launch it directly from the terminal using:
 
 ```
-chmod +x FuzzyBuddyFarms
-./FuzzyBuddyFarms
+chmod +x Fuzzy_Buddy_Farms
+./Fuzzy_Buddy_Farms
 
 ```
 
 Or make it executable from your file manager by right-clicking it → Properties → Permissions → "Allow executing file as program" (steps vary slightly by desktop environment), so you can double-click to launch the program.
 
-__Fedora Distros__
-
-work in progress
-
-dnf install clang
 
 ## Linux (arm64/aarch64)
-
-__Raspberry Pi 3/4/5/400 supported__
 
 First confirm the OS you are running is a 64bit version with:
 
@@ -301,7 +325,7 @@ sudo apt install -y git clang \
   libxcursor-dev libxi-dev libgl1-mesa-dev libasound2-dev
 ```
 
-__INSTALL ODIN__
+__DOWNLOAD ODIN__
 
 Install the linux arm64 release from Odin via command line:
 
@@ -336,8 +360,8 @@ If your ```LLVM``` is outdated please update to the latest release, Odin support
 Once that has all been installed, run:
 
 ```
-cd FuzzyBuddyFarms
 git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
+cd FuzzyBuddyFarms
 ```
 
 Now build an executable:
@@ -375,6 +399,322 @@ or
 LIBGL_ALWAYS_SOFTWARE=1 ./Fuzzy_Buddy_Farms
 ```
 
+### Fedora
+
+Tested on Fedora 42+. Also applies to **Nobara**.
+
+__1. INSTALL DEPENDENCIES__
+
+```
+sudo dnf install -y git clang
+libX11-devel libXrandr-devel libXinerama-devel
+libXcursor-devel libXi-devel
+mesa-libGL-devel mesa-libGLU-devel alsa-lib-devel
+```
+
+Fedora uses `-devel` suffixes and capitalized X11 names (`libX11-devel`, not `libx11-dev`) — the single most common mistake when adapting Debian instructions.
+
+Shortcut — this pulls in most X11 development headers at once:
+
+```
+sudo dnf install -y git clang @development-tools
+sudo dnf install -y mesa-libGL-devel alsa-lib-devel libXrandr-devel
+libXinerama-devel libXcursor-devel libXi-devel libX11-devel
+```
+
+__2. DOWNLOAD ODIN__
+
+```
+cd ~
+curl -L -o odin.zip https://github.com/odin-lang/Odin/releases/latest/download/odin-linux-amd64-nightly.zip
+unzip odin.zip -d odin
+echo 'export PATH="HOME/odin:PATH"' >> ~/.bashrc
+source ~/.bashrc
+odin version
+```
+
+__3. CLONE AND BUILD__
+
+```
+cd ~
+git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
+cd FuzzyBuddyFarms
+odin build . -out:Fuzzy_Buddy_Farms -o:speed
+chmod +x Fuzzy_Buddy_Farms
+./Fuzzy_Buddy_Farms
+```
+
+### Arch Linux
+
+Also applies to **EndeavourOS**, **CachyOS**, and other Arch derivatives.
+
+__1. INSTALL DEPENDENCIES__
+
+```
+sudo pacman -Syu --needed git base-devel clang llvm
+libx11 libxrandr libxinerama libxcursor libxi
+mesa glu alsa-lib
+```
+
+Arch doesn't split packages into runtime and `-dev` halves — headers ship with the main package so there are no `-devel` names to hunt for. Note `mesa` provides the OpenGL headers and `glu` is separate.
+
+__2. INSTALL ODIN__
+
+**Option A — AUR (recommended):** the `odin-git` package builds the compiler from source [^e8b3c9]:
+
+```
+sudo pacman -S --needed git base-devel
+git clone https://aur.archlinux.org/odin-git.git
+cd odin-git
+makepkg -si
+```
+
+Or with an AUR helper:
+
+```
+yay -S odin-git
+```
+
+> [!WARNING]
+> AUR packages are user-maintained and occasionally break — `odin-git` has had periods where a patch failed to apply [^e8b3c9]. If `makepkg` errors out, check the [AUR comments](https://aur.archlinux.org/packages/odin-git) or use Option B.
+
+**Option B — official binary release:**
+
+```
+cd ~
+curl -L -o odin.zip https://github.com/odin-lang/Odin/releases/latest/download/odin-linux-amd64-nightly.zip
+unzip odin.zip -d odin
+echo 'export PATH=":HOME/odin:PATH"' >> ~/.bashrc
+source ~/.bashrc
+odin version
+```
+
+__3. CLONE AND BUILD__
+
+```
+cd ~
+git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
+cd FuzzyBuddyFarms
+odin build . -out:Fuzzy_Buddy_Farms -o:speed
+chmod +x Fuzzy_Buddy_Farms
+./Fuzzy_Buddy_Farms
+```
+
+### Manjaro
+
+Manjaro is Arch-based so the packages are identical but Manjaro holds updates back on its own schedule so always sync fully first.
+
+__1. INSTALL DEPENDENCIES__
+
+```
+sudo pacman -Syu --needed git base-devel clang llvm
+libx11 libxrandr libxinerama libxcursor libxi
+mesa glu alsa-lib
+```
+
+
+> [!WARNING]
+> Never use `pacman -Sy package` alone on Manjaro or Arch — partial upgrades cause broken library versions. Always `-Syu`.
+
+__2. INSTALL ODIN__
+
+Manjaro ships `pamac`, which can build AUR packages once enabled:
+
+```
+pamac build odin-git
+```
+
+If AUR support is off, enable it in **Add/Remove Software → Preferences → Third Party → AUR support**, or just use the binary release method from the Arch section above.
+
+__3. CLONE AND BUILD__
+
+Identical to Arch — Follow the [Arch Linux](#arch-linux) section above.
+
+### Kubuntu
+
+Kubuntu is Ubuntu with the KDE Plasma desktop. **The build steps are byte-for-byte identical to the Debian/Ubuntu guide** — same `apt`, same package names, same everything.
+
+Follow the [Debian / Ubuntu family](#debian--ubuntu-family) section above.
+
+The only difference is launching by double-click: in **Dolphin** (KDE's file manager), right-click `Fuzzy_Buddy_Farms` → **Properties** → **Permissions** tab → check **Is executable**. Then double-click and choose **Execute**.
+
+The same applies to **Xubuntu**, **Lubuntu**, **Ubuntu Budgie**, and **Linux Mint** — desktop environment doesn't affect the build.
+
+### Gentoo
+
+Gentoo builds everything from source, so most dependencies may already be present. Gentoo has no `-dev` split — headers always install with the library.
+
+__1. INSTALL DEPENDENCIES__
+
+```
+sudo emerge --ask --noreplace
+dev-vcs/git
+sys-devel/clang
+x11-libs/libX11
+x11-libs/libXrandr
+x11-libs/libXinerama
+x11-libs/libXcursor
+x11-libs/libXi
+media-libs/mesa
+media-libs/glu
+media-libs/alsa-lib
+```
+
+`--noreplace` skips anything already installed. Add `--ask` to review the plan before committing.
+
+Make sure Mesa is built with OpenGL support in `/etc/portage/make.conf`:
+
+```
+USE="X opengl"
+VIDEO_CARDS="amdgpu radeonsi"
+```
+or nvidia, intel, etc.
+
+
+Then rebuild anything affected:
+
+```
+sudo emerge --ask --changed-use --deep @world
+```
+
+__2. INSTALL ODIN__
+
+Odin isn't in the official Portage tree. Use the binary release:
+
+```
+cd ~
+curl -L -o odin.zip https://github.com/odin-lang/Odin/releases/latest/download/odin-linux-amd64-nightly.zip
+unzip odin.zip -d odin
+echo 'export PATH=":HOME/odin:PATH"' >> ~/.bashrc
+source ~/.bashrc
+odin version
+```
+
+Or build from source (Odin needs LLVM 17–22):
+
+```
+sudo emerge --ask sys-devel/llvm dev-vcs/git-lfs
+git clone https://github.com/odin-lang/Odin
+cd Odin
+git lfs install && git lfs pull
+make release-native
+echo 'export PATH=":HOME/Odin:PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+If your default LLVM is outside 17–22, point the build at a specific slot:
+
+```
+LLVM_CONFIG=/usr/lib/llvm/18/bin/llvm-config make release-native
+```
+
+__3. CLONE AND BUILD__
+
+```
+cd ~
+git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
+cd FuzzyBuddyFarms
+odin build . -out:Fuzzy_Buddy_Farms -o:speed
+chmod +x Fuzzy_Buddy_Farms
+./Fuzzy_Buddy_Farms
+```
+
+### SteamOS / Steam Deck
+
+> [!IMPORTANT]
+> SteamOS uses an immutable (read-only) root filesystem, and system changes are **wiped by every SteamOS update**. Method A below avoids this entirely and is strongly recommended.
+
+First, switch to **Desktop Mode** (Steam button → Power → Switch to Desktop) and open **Konsole**.
+
+Set a password if you've never done so — `sudo` won't work without one: ```passwd```
+
+---
+
+#### Method A — Distrobox (recommended, survives updates)
+
+Distrobox runs a full Arch container with your home directory shared, so you can install build tools without touching SteamOS itself [^ecd868][^02fc7c]. Nothing breaks on update.
+
+```
+distrobox create --name fuzzydev --image archlinux:latest
+distrobox enter fuzzydev
+```
+
+Now inside the container:
+
+```
+sudo pacman -Syu --needed git base-devel clang llvm
+libx11 libxrandr libxinerama libxcursor libxi
+mesa glu alsa-lib
+cd ~
+curl -L -o odin.zip https://github.com/odin-lang/Odin/releases/latest/download/odin-linux-amd64-nightly.zip
+unzip odin.zip -d odin
+export PATH=":HOME/odin:PATH"
+git clone https://github.com/oooFruitSnacks/FuzzyBuddyFarms.git
+cd FuzzyBuddyFarms
+odin build . -out:Fuzzy_Buddy_Farms -o:speed
+```
+
+Type `exit` to leave the container. Because Distrobox shares your home directory, the binary is available directly from SteamOS:
+
+```
+cd ~/FuzzyBuddyFarms
+chmod +x Fuzzy_Buddy_Farms
+./Fuzzy_Buddy_Farms
+```
+
+---
+
+#### Method B — Unlock the filesystem (changes lost on update)
+
+```
+sudo steamos-devmode enable
+```
+
+This helper disables read-only mode, populates the pacman keyring, restores headers stripped from the shipping image, and installs base development tools [^558924].
+
+If `steamos-devmode` isn't available or errors, do it manually [^0b7f0f]:
+
+```
+sudo steamos-readonly disable
+sudo pacman-key --init
+sudo pacman-key --populate archlinux
+sudo pacman -Syu
+```
+
+Then install dependencies and Odin exactly as in the [Arch Linux](#arch-linux) section.
+
+When finished, re-enable protection:
+
+```
+sudo steamos-readonly enable
+```
+
+> [!WARNING]
+> Everything installed this way is erased by the next SteamOS update [^0bde30]. `steamos-devmode enable` has also been reported to fail with read-only errors on some SteamOS versions [^6ce365]. If you hit that, use Method A.
+
+---
+
+#### Adding the game to your Steam library
+
+Steam → Games → Add a Non-Steam Game to My Library → Browse
+
+Select `~/FuzzyBuddyFarms/Fuzzy_Buddy_Farms`. Then in its Properties, set **Start In** to `/home/deck/FuzzyBuddyFarms` so the game finds its `assets` folder. It'll now launch from Game Mode.
+
+> [!NOTE]
+> The Steam Deck's AMD GPU fully supports OpenGL 3.3, so no `MESA_GL_VERSION_OVERRIDE` workaround is needed — that's only required on Raspberry Pi hardware.
+
+### Linux troubleshooting (all distributions)
+
+**`error while loading shared libraries: libXcursor.so.1`** — runtime libraries are missing. Install the runtime (non-`-dev`) packages for your distro.
+
+**`Permission denied`** — run `chmod +x Fuzzy_Buddy_Farms`.
+
+**Game can't find assets** — always launch from inside the repo folder, so `assets/` sits next to the binary.
+
+**`odin: command not found`** — your `PATH` change didn't take. Run `source ~/.bashrc`, or `source ~/.zshrc` if you use zsh.
+
+**`GLXBadFBConfig` / `Failed to create context`** — your GPU doesn't advertise OpenGL 3.3. Common on Raspberry Pi and very old integrated graphics. See the [Raspberry Pi](#linux-arm64aarch64) section for the `MESA_GL_VERSION_OVERRIDE=3.3` workaround.
+
 # License
 
 FuzzyBuddyFarms is licensed under the [GNU General Public License v2.0](LICENSE).
@@ -384,7 +724,6 @@ This means you're free to run, study, modify, and redistribute the source code �
 # Security Policy
 
 Found a security vulnerability? Please __DON'T__ open a public issue for it — see [SECURITY.md](SECURITY.md) for how to report it responsibly.
-
 
 Enjoy the game!
 
