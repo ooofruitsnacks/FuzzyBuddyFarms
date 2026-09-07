@@ -213,43 +213,46 @@ jobs:
         run: |
           set -euo pipefail
           docker run --rm --platform linux/arm64 \
-            -e GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
             -v "$PWD:/src" -w /src \
             debian:12 bash -euo pipefail -c '
               apt-get update
               apt-get install -y --no-install-recommends \
-                curl ca-certificates clang \
+                curl ca-certificates clang binutils \
                 libx11-dev libxrandr-dev libxinerama-dev \
                 libxcursor-dev libxi-dev libgl1-mesa-dev libasound2-dev
 
-              ODIN_URL=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
-                https://api.github.com/repos/odin-lang/Odin/releases/latest \
-                | grep -o "https://github.com/odin-lang/Odin/releases/download/[^\"]*odin-linux-arm64[^\"]*\.tar\.gz" \
-                | head -1)
-              echo "Downloading Odin from: $ODIN_URL"
-
-              curl -fL -o /tmp/odin.tar.gz "$ODIN_URL"
+              ODIN_VERSION=dev-2026-09
+              curl -fL -o /tmp/odin.tar.gz \
+                "https://github.com/odin-lang/Odin/releases/download/${ODIN_VERSION}/odin-linux-arm64-${ODIN_VERSION}.tar.gz"
               mkdir -p /opt/odin
               tar -xzf /tmp/odin.tar.gz -C /opt/odin
               ODIN_BIN=$(find /opt/odin -maxdepth 3 -type f -name odin | head -1)
-              if [ -z "$ODIN_BIN" ]; then
-                echo "ERROR: odin binary not found. Archive contents:"
-                find /opt/odin -maxdepth 3
-                exit 1
-              fi
               chmod +x "$ODIN_BIN"
               export ODIN_ROOT=$(dirname "$ODIN_BIN")
               "$ODIN_BIN" version
 
-              test -f packaging/raspberrypi/isoc23_compat.c || {
-                echo "ERROR: isoc23_compat.c missing — commit it to the repo"; exit 1; }
-              clang -c packaging/raspberrypi/isoc23_compat.c -o /tmp/isoc23_compat.o
+              echo "=== PREFLIGHT: locate shim source ==="
+              ls -la packaging/raspberrypi/ 2>/dev/null \
+                || { echo "FATAL: packaging/raspberrypi/ does not exist in the repo"; exit 1; }
+              test -f packaging/raspberrypi/isoc23_compat.c \
+                || { echo "FATAL: isoc23_compat.c is not committed"; exit 1; }
 
+              echo "=== Compiling C23 compatibility shim ==="
+              clang -c packaging/raspberrypi/isoc23_compat.c -o /tmp/isoc23_compat.o
+              nm -g --defined-only /tmp/isoc23_compat.o | grep isoc23 \
+                || { echo "FATAL: shim compiled but defines no __isoc23_* symbols"; exit 1; }
+
+              echo "=== Injecting shim into libraylib.a ==="
+              RAYLIB_A="$ODIN_ROOT/vendor/raylib/linux-arm64/libraylib.a"
+              ar r "$RAYLIB_A" /tmp/isoc23_compat.o
+              ranlib "$RAYLIB_A"
+              ar t "$RAYLIB_A" | grep isoc23_compat.o \
+                || { echo "FATAL: ar did not add the shim member"; exit 1; }
+
+              echo "=== Building ==="
               "$ODIN_BIN" build . -out:Fuzzy_Buddy_Farms -o:speed \
                 -extra-linker-flags:"/tmp/isoc23_compat.o"
-
             '
-
 
       - name: Verify glibc floor
         run: |
