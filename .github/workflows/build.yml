@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   check:
-    name: Vet / Check
+    name: Check
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
@@ -41,7 +41,7 @@ jobs:
             libgl1-mesa-dev \
             libasound2-dev
 
-      - name: Check and vet
+      - name: Check
         run: odin check ${{ env.ODIN_PACKAGE_PATH }}
 
   build:
@@ -204,40 +204,55 @@ jobs:
     name: Raspberry Pi OS (arm64 — Debian 12 / glibc 2.36)
     needs: check
     runs-on: ubuntu-24.04-arm
-    continue-on-error: true
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build inside Debian 12 arm64 container
+      - name: Build for Raspberry Pi OS (Debian 12 / glibc 2.36)
         run: |
           set -euo pipefail
           docker run --rm --platform linux/arm64 \
+            -e GH_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
             -v "$PWD:/src" -w /src \
             debian:12 bash -euo pipefail -c '
               apt-get update
               apt-get install -y --no-install-recommends \
-                curl unzip ca-certificates clang \
+                curl ca-certificates clang \
                 libx11-dev libxrandr-dev libxinerama-dev \
                 libxcursor-dev libxi-dev libgl1-mesa-dev libasound2-dev
 
-              curl -fL -o /tmp/odin.zip \
-                https://github.com/odin-lang/Odin/releases/latest/download/odin-linux-arm64-nightly.zip
-              mkdir -p /opt/odin
-              unzip -q /tmp/odin.zip -d /opt/odin
-              ODIN=$(find /opt/odin -maxdepth 2 -name odin -type f | head -1)
-              chmod +x "$ODIN"
-              "$ODIN" version
+              ODIN_URL=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+                https://api.github.com/repos/odin-lang/Odin/releases/latest \
+                | grep -o "https://github.com/odin-lang/Odin/releases/download/[^\"]*odin-linux-arm64[^\"]*\.tar\.gz" \
+                | head -1)
+              echo "Downloading Odin from: $ODIN_URL"
 
-              "$ODIN" build . -out:Fuzzy_Buddy_Farms -o:speed
+              curl -fL -o /tmp/odin.tar.gz "$ODIN_URL"
+              mkdir -p /opt/odin
+              tar -xzf /tmp/odin.tar.gz -C /opt/odin
+              ODIN_BIN=$(find /opt/odin -maxdepth 3 -type f -name odin | head -1)
+              if [ -z "$ODIN_BIN" ]; then
+                echo "ERROR: odin binary not found. Archive contents:"
+                find /opt/odin -maxdepth 3
+                exit 1
+              fi
+              chmod +x "$ODIN_BIN"
+              export ODIN_ROOT=$(dirname "$ODIN_BIN")
+              "$ODIN_BIN" version
+              "$ODIN_BIN" build . -out:Fuzzy_Buddy_Farms -o:speed
             '
+
 
       - name: Verify glibc floor
         run: |
-          echo "Highest glibc symbol version required by the binary:"
-          objdump -T ${{ env.BINARY_NAME }} | grep -o 'GLIBC_[0-9.]\+' | sort -uV | tail -1
-          echo "(Must be 2.36 or lower to run on Raspberry Pi OS Bookworm)"
+          MAX=$(objdump -T ${{ env.BINARY_NAME }} | grep -o 'GLIBC_[0-9.]\+' | sort -uV | tail -1)
+          echo "Highest glibc symbol required: $MAX"
+          if [ "$(printf '%s\nGLIBC_2.36\n' "$MAX" | sort -V | tail -1)" != "GLIBC_2.36" ]; then
+            echo "ERROR: requires $MAX but Raspberry Pi OS Bookworm only has GLIBC_2.36"
+            exit 1
+          fi
+          echo "OK — runs on Raspberry Pi OS Bookworm and Trixie"
 
       - name: Stage release folder
         run: |
