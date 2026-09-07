@@ -250,8 +250,7 @@ jobs:
                 || { echo "FATAL: ar did not add the shim member"; exit 1; }
 
               echo "=== Building ==="
-              "$ODIN_BIN" build . -out:Fuzzy_Buddy_Farms -o:speed \
-                -extra-linker-flags:"/tmp/isoc23_compat.o"
+              "$ODIN_BIN" build . -out:Fuzzy_Buddy_Farms -o:speed
             '
 
       - name: Verify glibc floor
