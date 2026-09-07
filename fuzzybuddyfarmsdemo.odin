@@ -2100,10 +2100,10 @@ if sd.version >= 3 {
     }
 queen_tiers: []i32
 if sd.version >= 2 {
-queen_tiers := make([]i32, sd.box_count, context.temp_allocator)
-if sd.version >= 4 && sd.box_count > 0 {
-    read_bytes(data, &off, &queen_tiers[0], sd.box_count*size_of(i32))
-}
+    queen_tiers = make([]i32, sd.box_count, context.temp_allocator)
+    if sd.version >= 4 && sd.box_count > 0 {
+        read_bytes(data, &off, &queen_tiers[0], sd.box_count*size_of(i32))
+    }
 
 if sd.version >= 5 {
     sh: f32; ss: f32; sm: f32; sp: f32
