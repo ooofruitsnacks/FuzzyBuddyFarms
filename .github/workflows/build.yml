@@ -240,7 +240,14 @@ jobs:
               chmod +x "$ODIN_BIN"
               export ODIN_ROOT=$(dirname "$ODIN_BIN")
               "$ODIN_BIN" version
-              "$ODIN_BIN" build . -out:Fuzzy_Buddy_Farms -o:speed
+
+              test -f packaging/raspberrypi/isoc23_compat.c || {
+                echo "ERROR: isoc23_compat.c missing — commit it to the repo"; exit 1; }
+              clang -c packaging/raspberrypi/isoc23_compat.c -o /tmp/isoc23_compat.o
+
+              "$ODIN_BIN" build . -out:Fuzzy_Buddy_Farms -o:speed \
+                -extra-linker-flags:"/tmp/isoc23_compat.o"
+
             '
 
 
