@@ -26,13 +26,18 @@ https://github.com/user-attachments/assets/7fbb42ac-bae3-456c-bd60-c6c6c5f8df02
 ---
 <div align="center">
 
-![Badge](https://img.shields.io/badge/Windows-green)
+__Mac OS \ Windows__
+
 ![Badge](https://img.shields.io/badge/macOS(intel)-yellow)
 ![Badge](https://img.shields.io/badge/macOS(silicon/m_series)-green)
+![Badge](https://img.shields.io/badge/Windows-green)
+
+__Linux__
+
 ![Badge](https://img.shields.io/badge/Ubuntu-green)
 ![Badge](https://img.shields.io/badge/Kubuntu-green)
-![Badge](https://img.shields.io/badge/Debian_11-orange)
-![Badge](https://img.shields.io/badge/Debian_12-yellow)
+![Badge](https://img.shields.io/badge/Debian_11-yellow)
+![Badge](https://img.shields.io/badge/Debian_12-orange)
 ![Badge](https://img.shields.io/badge/Debian_13+-green)
 ![Badge](https://img.shields.io/badge/Fedora-green)
 ![Badge](https://img.shields.io/badge/Nobara-green)
@@ -40,10 +45,11 @@ https://github.com/user-attachments/assets/7fbb42ac-bae3-456c-bd60-c6c6c5f8df02
 ![Badge](https://img.shields.io/badge/Manjaro-green)
 ![Badge](https://img.shields.io/badge/Gentoo-green)
 ![Badge](https://img.shields.io/badge/SteamOS-green)
+
 ![Badge](https://img.shields.io/badge/Raspberry_Pi_OS-green)
-![Badge](https://img.shields.io/badge/32_bit_RASPI_OS-red)
-![Badge](https://img.shields.io/badge/NIXos-red)
-![Badge](https://img.shields.io/badge/Alpine-orange)
+![Badge](https://img.shields.io/badge/Raspberryi_Pi_OS|32bit-red)
+![Badge](https://img.shields.io/badge/NIXos-teal)
+![Badge](https://img.shields.io/badge/Alpine-teal)
 ![Badge](https://img.shields.io/badge/Arduino-pink)
 
 __COLOR CODING INDEX__
@@ -53,6 +59,7 @@ __COLOR CODING INDEX__
 ![Badge](https://img.shields.io/badge/Under%20Work%20-orange)
 ![Badge](https://img.shields.io/badge/Not%20Supported%20-red)
 ![Badge](https://img.shields.io/badge/Future%20Support%20-pink)
+![Badge](https://img.shields.io/badge/Newly%20Supported%20-teal)
 
 </div>
 
