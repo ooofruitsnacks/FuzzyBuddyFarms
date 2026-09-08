@@ -13,7 +13,14 @@ finish-args:
   - --device=dri
   - --socket=pulseaudio
   - --device=input
-  - --share=network
+
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /lib/cmake
+  - /share/man
+  - '*.a'
+  - '*.la'
 
 modules:
   - name: odin
@@ -21,14 +28,58 @@ modules:
     build-options:
       append-path: /usr/lib/sdk/llvm20/bin
       prepend-ld-library-path: /usr/lib/sdk/llvm20/lib
+      env:
+        REAL_LLVM_CONFIG: /usr/lib/sdk/llvm20/bin/llvm-config
     build-commands:
-      - make release-native
+      - cp odin-llvm-target-guards.sh ./
+      - bash ./odin-llvm-target-guards.sh
       - mkdir -p /app/odin
-      - cp -r odin base core vendor shared /app/odin/
+      - install -Dm755 odin /app/odin/odin
+      - cp -r base core vendor shared /app/odin/
+      - /app/odin/odin version
     sources:
       - type: git
         url: https://github.com/odin-lang/Odin.git
         tag: dev-2026-08
+        commit: 8412dc37aa91def0c2fa90f89eade29056b4e608
+      - type: file
+        path: odin-llvm-target-guards.sh
+    cleanup:
+      - '*'
+
+  - name: raylib
+    buildsystem: simple
+    build-commands:
+      - |
+        set -euo pipefail
+        cmake -S . -B build -GNinja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DBUILD_EXAMPLES=OFF \
+          -DPLATFORM=Desktop \
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+        ninja -C build
+
+        BUILT="$(find build -name libraylib.a -print -quit)"
+        test -n "$BUILT" || { echo "FATAL: libraylib.a was not produced"; exit 1; }
+        echo "Built: $BUILT"
+
+        BINDING=/app/odin/vendor/raylib/raylib.odin
+        test -f "$BINDING" || { echo "FATAL: $BINDING missing"; exit 1; }
+        REL="$(grep -o '"linux[^"]*libraylib\.a"' "$BINDING" | head -1 | tr -d '"')"
+        if [ -z "$REL" ]; then
+          echo "WARNING: could not parse the path from raylib.odin; using default"
+          REL="linux/libraylib.a"
+        fi
+        echo "Odin expects vendor/raylib/$REL"
+
+        install -Dm644 "$BUILT" "/app/odin/vendor/raylib/$REL"
+        ls -la "$(dirname "/app/odin/vendor/raylib/$REL")"
+    sources:
+      - type: git
+        url: https://github.com/raysan5/raylib.git
+        tag: '5.5'
+        commit: 8412dc37aa91def0c2fa90f89eade29056b4e608
     cleanup:
       - '*'
 
@@ -37,11 +88,27 @@ modules:
     build-options:
       append-path: /app/odin:/usr/lib/sdk/llvm20/bin
       prepend-ld-library-path: /usr/lib/sdk/llvm20/lib
+      env:
+        ODIN_ROOT: /app/odin
     build-commands:
+      - |
+        set -euo pipefail
+        echo "=== Preflight ==="
+        command -v odin
+        command -v clang
+        odin version
+        test -s "$ODIN_ROOT/vendor/raylib/linux/libraylib.a" \
+          || { echo "FATAL: libraylib.a missing or empty"; exit 1; }
+        head -c 64 "$ODIN_ROOT/vendor/raylib/linux/libraylib.a" | grep -q 'git-lfs' \
+          && { echo "FATAL: libraylib.a is a Git LFS pointer, not an archive"; exit 1; }
+        echo "OK"
+
       - odin build . -out:Fuzzy_Buddy_Farms -o:speed
+
       - install -Dm755 Fuzzy_Buddy_Farms /app/share/fuzzybuddyfarms/Fuzzy_Buddy_Farms
       - cp -r assets /app/share/fuzzybuddyfarms/
       - install -Dm755 packaging/flatpak/fuzzybuddyfarms.sh /app/bin/fuzzybuddyfarms.sh
+
       - install -Dm644 packaging/flatpak/io.github.ooofruitsnacks.FuzzyBuddyFarms.desktop
           /app/share/applications/io.github.ooofruitsnacks.FuzzyBuddyFarms.desktop
       - install -Dm644 packaging/flatpak/io.github.ooofruitsnacks.FuzzyBuddyFarms.metainfo.xml
@@ -51,4 +118,10 @@ modules:
     sources:
       - type: dir
         path: ../..
+
+      # FLATHUB SUBMISSION — delete the `type: dir` block above and use this:
+      # - type: git
+      #   url: https://github.com/ooofruitsnacks/FuzzyBuddyFarms.git
+      #   tag: v1.0.0
+      #   commit: REPLACE_WITH_YOUR_RELEASE_COMMIT_SHA
 

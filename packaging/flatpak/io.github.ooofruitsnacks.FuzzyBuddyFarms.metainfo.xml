@@ -3,7 +3,7 @@
   <id>io.github.ooofruitsnacks.FuzzyBuddyFarms</id>
 
   <name>Fuzzy Buddy Farms</name>
-  <summary>A bee farming simulator</summary>
+  <summary>Build a bee farm in the town of Honeyville</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-2.0-only</project_license>
@@ -14,18 +14,19 @@
 
   <description>
     <p>
-      Welcome to Honeyville! Build and grow your own bee farm from a
-      small starting plot of land. Purchase hives, flowers, trees, and
-      queen bee upgrades at the market.
+      Welcome to Honeyville! Build and grow your own bee farm from a small
+      starting plot of land. Purchase hives, flowers, trees, and queen bee
+      upgrades at the market.
     </p>
     <p>
-      Strategize your business model — each NPC buys honey at different
-      rates. Seasons, weather cycles, and day/night cycles all affect
-      honey production and value. Visit the soccer field, race track,
-      fishing pond, and park for mini games.
+      Strategize your business model — each NPC buys honey at a different
+      rate. Seasons, weather cycles, and day/night cycles all affect honey
+      production and value. Visit the soccer field, race track, fishing
+      pond, and park for mini games.
     </p>
     <p>
-      I hope you enjoy :)
+      Everything is rendered with vector math in Raylib, so it runs on
+      almost any hardware from the past two decades.
     </p>
   </description>
 
@@ -38,16 +39,16 @@
   <screenshots>
     <screenshot type="default">
       <caption>Your farm in Honeyville on a summer morning</caption>
-      <image>https://raw.githubusercontent.com/ooofruitsnacks/FuzzyBuddyFarms/v0.2.11/packaging/flatpak/screenshots/01-farm-overview.png</image>
+      <image>https://raw.githubusercontent.com/ooofruitsnacks/FuzzyBuddyFarms/main/packaging/flatpak/screenshots/01-farm-overview.png</image>
     </screenshot>
   </screenshots>
 
   <content_rating type="oars-1.1"/>
 
   <releases>
-    <release version="1.0.0" date="2026-09-07">
+    <release version="1.0.0" date="2026-09-08">
       <description>
-        <p>Initial Flatpak release</p>
+        <p>Initial Flatpak release.</p>
       </description>
     </release>
   </releases>
