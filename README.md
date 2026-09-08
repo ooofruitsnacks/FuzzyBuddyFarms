@@ -6,9 +6,25 @@
 
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-purple.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Raspberry%20Pi-blue)](#-download)
+![GitHub Repo stars](https://img.shields.io/github/stars/oooFruitSnacks/FuzzyBuddyFarms)
 
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/oooFruitSnacks/FuzzyBuddyFarms/total)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/oooFruitSnacks/FuzzyBuddyFarms)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/w/oooFruitSnacks/FuzzyBuddyFarms)
 
 ![Platform](https://img.shields.io/badge/build-passing-brightgreen?style=for-the-badge)
+
+</div>
+
+> [!TIP]
+> Please visit the **Wiki** section for a complete guide of the game with tips, key binds, easter eggs, and information on the story-line. A lot of time and passion has gone into this project. I hope you enjoy it! 🎉
+
+I'm the only person building this game so please be patient lol. I created FuzzyBuddyFarms because I wanted to learn Odin and because I wanted to try to build a real video game. My approach is a little different compared to other conventional video games. Everything is rendered and drawn using Raylib with vector math. This was done intentionally so anyone can play this game on any machine. **You can run this game on pretty much any hardware from the past 2 decades.**
+
+https://github.com/user-attachments/assets/7fbb42ac-bae3-456c-bd60-c6c6c5f8df02
+
+---
+<div align="center">
 
 ![Badge](https://img.shields.io/badge/Windows-green)
 ![Badge](https://img.shields.io/badge/macOS(intel)-yellow)
@@ -40,14 +56,7 @@ __COLOR CODING INDEX__
 
 </div>
 
-> [!TIP]
-> Please visit the **Wiki** section for a complete guide of the game with tips, key binds, easter eggs, and information on the story-line. A lot of time and passion has gone into this project. I hope you enjoy it! 🎉
-
-I'm the only person building this game so please be patient lol. I created FuzzyBuddyFarms because I wanted to learn Odin and because I wanted to try to build a real video game. My approach is a little different compared to other conventional video games. Everything is rendered and drawn using Raylib with vector math. This was done intentionally so anyone can play this game on any machine. **You can run this game on pretty much any hardware from the past 2 decades.**
-
-https://github.com/user-attachments/assets/7fbb42ac-bae3-456c-bd60-c6c6c5f8df02
-
----
+<div align="center">
 
 ## 📖 Table of Contents
 
@@ -108,6 +117,8 @@ https://github.com/user-attachments/assets/7fbb42ac-bae3-456c-bd60-c6c6c5f8df02
 | ❓ **Troubleshooting** | All distributions | [Jump →](#-linux-troubleshooting-all-distributions) |
 
 </details>
+
+</div>
 
 ---
 
