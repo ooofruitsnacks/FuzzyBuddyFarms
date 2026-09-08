@@ -179,6 +179,19 @@ cat /etc/os-release
 
 </details>
 
+### Flatpak
+
+Download `Fuzzy_Buddy_Farms-x86_64.flatpak` (or `aarch64`) from
+[Releases](https://github.com/ooofruitsnacks/FuzzyBuddyFarms/releases):
+
+```bash
+flatpak install --user Fuzzy_Buddy_Farms-x86_64.flatpak
+flatpak run io.github.ooofruitsnacks.FuzzyBuddyFarms
+```
+
+**Flatpak solves nearly every gap from the "unsupported distros" list.** openSUSE, Void, Solus, Slackware, NixOS, RHEL 8, Alpine, and the immutable Fedora variants all get covered by one artifact because the runtime carries its own glibc and X11 stack. 32-bit ARM architecture is not supported. 
+
+
 ### 📦 How to Download
 
 **Go to the Releases section of FuzzyBuddyFarms:**
