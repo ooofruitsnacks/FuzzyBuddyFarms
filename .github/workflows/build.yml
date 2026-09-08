@@ -149,8 +149,6 @@ jobs:
           cp -r assets "$APP/Contents/Resources/"
           chmod +x "$APP/Contents/MacOS/Fuzzy_Buddy_Farms"
 
-          # Copy any dynamically-linked raylib next to the binary so the .app
-          # works on Macs that don't have Odin installed.
           echo "--- Linked libraries before fixup ---"
           otool -L "$APP/Contents/MacOS/Fuzzy_Buddy_Farms"
 
@@ -204,7 +202,6 @@ jobs:
     name: Raspberry Pi OS (arm64 — Debian 12 / glibc 2.36)
     needs: check
     runs-on: ubuntu-24.04-arm
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -307,18 +304,53 @@ jobs:
           cd release
           zip -r Fuzzy_Buddy_Farms-raspberrypi-arm64.zip Fuzzy_Buddy_Farms-raspberrypi-arm64
 
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Fuzzy_Buddy_Farms-raspberrypi-arm64
           path: release/Fuzzy_Buddy_Farms-raspberrypi-arm64.zip
 
+  flatpak:
+    name: Flatpak (${{ matrix.arch }})
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
+      options: --privileged
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Flatpak
+        uses: flathub-infra/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: Fuzzy_Buddy_Farms-${{ matrix.arch }}.flatpak
+          manifest-path: packaging/flatpak/io.github.ooofruitsnacks.FuzzyBuddyFarms.yml
+          cache-key: flatpak-${{ matrix.arch }}-${{ hashFiles('packaging/flatpak/*.yml') }}
+          arch: ${{ matrix.arch }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fuzzy_Buddy_Farms-${{ matrix.arch }}.flatpak
+          path: Fuzzy_Buddy_Farms-${{ matrix.arch }}.flatpak
+
   release:
     name: Create Release
-    needs: [ build, build-raspberry-pi ]
+    needs: [ build, build-raspberry-pi, flatpak ]
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -332,10 +364,12 @@ jobs:
 
       - name: Flatten artifacts and generate SHA256 checksums
         run: |
+          set -euo pipefail
           mkdir -p release-files
-          find artifacts -name "*.zip" -exec cp {} release-files/ \;
+          find artifacts -type f \( -name "*.zip" -o -name "*.flatpak" \) \
+            -exec cp {} release-files/ \;
           cd release-files
-          sha256sum *.zip > checksums.txt
+          sha256sum * > checksums.txt
           echo "Generated checksums:"
           cat checksums.txt
 

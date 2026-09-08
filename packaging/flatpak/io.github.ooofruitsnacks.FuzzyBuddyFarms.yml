@@ -1,0 +1,54 @@
+app-id: io.github.ooofruitsnacks.FuzzyBuddyFarms
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.llvm20
+command: fuzzybuddyfarms.sh
+
+finish-args:
+  - --socket=x11
+  - --socket=wayland
+  - --share=ipc
+  - --device=dri
+  - --socket=pulseaudio
+  - --device=input
+  - --share=network
+
+modules:
+  - name: odin
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/llvm20/bin
+      prepend-ld-library-path: /usr/lib/sdk/llvm20/lib
+    build-commands:
+      - make release-native
+      - mkdir -p /app/odin
+      - cp -r odin base core vendor shared /app/odin/
+    sources:
+      - type: git
+        url: https://github.com/odin-lang/Odin.git
+        tag: dev-2026-08
+    cleanup:
+      - '*'
+
+  - name: fuzzybuddyfarms
+    buildsystem: simple
+    build-options:
+      append-path: /app/odin:/usr/lib/sdk/llvm20/bin
+      prepend-ld-library-path: /usr/lib/sdk/llvm20/lib
+    build-commands:
+      - odin build . -out:Fuzzy_Buddy_Farms -o:speed
+      - install -Dm755 Fuzzy_Buddy_Farms /app/share/fuzzybuddyfarms/Fuzzy_Buddy_Farms
+      - cp -r assets /app/share/fuzzybuddyfarms/
+      - install -Dm755 packaging/flatpak/fuzzybuddyfarms.sh /app/bin/fuzzybuddyfarms.sh
+      - install -Dm644 packaging/flatpak/io.github.ooofruitsnacks.FuzzyBuddyFarms.desktop
+          /app/share/applications/io.github.ooofruitsnacks.FuzzyBuddyFarms.desktop
+      - install -Dm644 packaging/flatpak/io.github.ooofruitsnacks.FuzzyBuddyFarms.metainfo.xml
+          /app/share/metainfo/io.github.ooofruitsnacks.FuzzyBuddyFarms.metainfo.xml
+      - install -Dm644 packaging/flatpak/io.github.ooofruitsnacks.FuzzyBuddyFarms.png
+          /app/share/icons/hicolor/256x256/apps/io.github.ooofruitsnacks.FuzzyBuddyFarms.png
+    sources:
+      - type: dir
+        path: ../..
+

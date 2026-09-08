@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ooofruitsnacks.FuzzyBuddyFarms</id>
+
+  <name>Fuzzy Buddy Farms</name>
+  <summary>A bee farming simulator</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-only</project_license>
+
+  <developer id="io.github.ooofruitsnacks">
+    <name>oooFruitSnacks</name>
+  </developer>
+
+  <description>
+    <p>
+      Welcome to Honeyville! Build and grow your own bee farm from a
+      small starting plot of land. Purchase hives, flowers, trees, and
+      queen bee upgrades at the market.
+    </p>
+    <p>
+      Strategize your business model — each NPC buys honey at different
+      rates. Seasons, weather cycles, and day/night cycles all affect
+      honey production and value. Visit the soccer field, race track,
+      fishing pond, and park for mini games.
+    </p>
+    <p>
+      I hope you enjoy :)
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.ooofruitsnacks.FuzzyBuddyFarms.desktop</launchable>
+
+  <url type="homepage">https://github.com/ooofruitsnacks/FuzzyBuddyFarms</url>
+  <url type="bugtracker">https://github.com/ooofruitsnacks/FuzzyBuddyFarms/issues</url>
+  <url type="vcs-browser">https://github.com/ooofruitsnacks/FuzzyBuddyFarms</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Your farm in Honeyville on a summer morning</caption>
+      <image>https://raw.githubusercontent.com/ooofruitsnacks/FuzzyBuddyFarms/v0.2.11/packaging/flatpak/screenshots/01-farm-overview.png</image>
+    </screenshot>
+  </screenshots>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="1.0.0" date="2026-09-07">
+      <description>
+        <p>Initial Flatpak release</p>
+      </description>
+    </release>
+  </releases>
+</component>
+

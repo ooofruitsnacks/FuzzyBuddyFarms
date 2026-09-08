@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Fuzzy Buddy Farms
+Comment=A bee farming simulator built in Odin and Raylib
+Exec=fuzzybuddyfarms.sh
+Icon=io.github.ooofruitsnacks.FuzzyBuddyFarms
+Terminal=false
+Categories=Game;Simulation;
+Keywords=bee;farm;honey;simulation;
+
