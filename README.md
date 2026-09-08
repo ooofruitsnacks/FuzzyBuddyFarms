@@ -120,6 +120,36 @@ __COLOR CODING INDEX__
 
 </div>
 
+### Other Distributions
+
+Not seeing your distro? The game builds anywhere you can get
+Odin, Clang, X11 headers, Mesa, and ALSA. Map the
+[dependency reference table](#linux) to your package manager:
+
+| Distro | Package Manager | Naming Convention |
+|:--|:--|:--|
+| openSUSE | `zypper install` | `-devel` (like Fedora) |
+| Void | `xbps-install` | `-devel` |
+| Solus | `eopkg install` | `-devel` |
+| RHEL / Rocky / Alma | `dnf install` | `-devel`, needs EPEL |
+| NixOS | `nix-shell` | see flake below |
+
+**Immutable systems** (Silverblue, Kinoite, Bazzite, SteamOS) —
+use Distrobox or `toolbox` rather than layering packages.
+See [Method A](#method-a--distrobox-recommended).
+
+> [!IMPORTANT]
+> **musl libc distros** (Alpine, postmarketOS, Void-musl) are not
+> supported. The prebuilt releases are glibc-linked and will not
+> run. Building from source requires rebuilding Raylib against musl.
+
+> [!NOTE]
+> **Minimum glibc:** 2.36 for `raspberrypi-arm64`, 2.39 for the
+> generic `linux-arm64` build. Check yours with `ldd --version`.
+> Debian 11, Ubuntu 20.04, and RHEL 8 are below both thresholds —
+> build from source on those.
+
+
 ---
 
 ## 🎮 How to Play
