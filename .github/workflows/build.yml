@@ -333,7 +333,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Flatpak
-        uses: flathub-infra/flatpak-github-actions/flatpak-builder@v6
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6.7
         with:
           bundle: Fuzzy_Buddy_Farms-${{ matrix.arch }}.flatpak
           manifest-path: packaging/flatpak/io.github.ooofruitsnacks.FuzzyBuddyFarms.yml
@@ -345,6 +345,7 @@ jobs:
         with:
           name: Fuzzy_Buddy_Farms-${{ matrix.arch }}.flatpak
           path: Fuzzy_Buddy_Farms-${{ matrix.arch }}.flatpak
+
 
   release:
     name: Create Release
