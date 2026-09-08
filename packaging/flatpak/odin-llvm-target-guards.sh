@@ -14,19 +14,24 @@ echo "=== LLVM $("$REAL_LLVM_CONFIG" --version) targets built: ${TARGETS_BUILT} 
 WANTED="X86 AArch64 ARM WebAssembly RISCV"
 
 HEADER="${WORK}/odin_llvm_target_stubs.h"
-{
-  echo '#ifndef ODIN_LLVM_TARGET_STUBS_H'
-  echo '#define ODIN_LLVM_TARGET_STUBS_H'
-  echo '#include <stdio.h>'
-  echo '#include <stdlib.h>'
-  echo 'static inline void odin_llvm_absent_target(const char *t) {'
-  echo '    fprintf(stderr,'
-  echo '        "\\nOdin: LLVM target \\"%s\\" was not compiled into this LLVM.\\n"'
-  echo '        "This Odin was built inside a Flatpak sandbox and can only\\n"'
-  echo '        "target the host architecture.\\n", t);'
-  echo '    abort();'
-  echo '}'
-} > "$HEADER"
+
+cat > "$HEADER" <<'HEADER_EOF'
+#ifndef ODIN_LLVM_TARGET_STUBS_H
+#define ODIN_LLVM_TARGET_STUBS_H
+
+#include <stdio.h>
+#include <stdlib.h>
+
+static inline void odin_llvm_absent_target(const char *target) {
+    fprintf(
+        stderr,
+        "\nOdin: LLVM target \"%s\" was not compiled into this LLVM.\n"
+        "This compiler cannot generate code for that target.\n",
+        target
+    );
+    abort();
+}
+HEADER_EOF
 
 MISSING_COUNT=0
 COMPONENTS=""
@@ -48,6 +53,10 @@ for T in $WANTED; do
 done
 
 echo '#endif' >> "$HEADER"
+
+echo "=== Checking generated LLVM target header ==="
+clang++ -x c++ -std=c++17 -fsyntax-only "$HEADER"
+
 
 echo "=== Generated prelude (${MISSING_COUNT} target(s) stubbed) ==="
 cat "$HEADER"
