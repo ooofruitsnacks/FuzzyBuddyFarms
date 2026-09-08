@@ -31,7 +31,6 @@ modules:
       env:
         REAL_LLVM_CONFIG: /usr/lib/sdk/llvm20/bin/llvm-config
     build-commands:
-      - cp odin-llvm-target-guards.sh ./
       - bash ./odin-llvm-target-guards.sh
       - mkdir -p /app/odin
       - install -Dm755 odin /app/odin/odin
@@ -79,7 +78,7 @@ modules:
       - type: git
         url: https://github.com/raysan5/raylib.git
         tag: '5.5'
-        commit: 8412dc37aa91def0c2fa90f89eade29056b4e608
+        commit: c1ab645ca298a2801097931d1079b10ff7eb9df8
     cleanup:
       - '*'
 
