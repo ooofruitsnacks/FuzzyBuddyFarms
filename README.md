@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🍯 Welcome to Honeyville! 🎉 🐝
+# 🍯 Welcome to Honeyville! 🐝
 
 **Bee Farming Simulator built in Odin + Raylib**
 
@@ -18,8 +18,6 @@
 
 > [!TIP]
 > Please visit the **Wiki** section for a complete guide of the game with tips, key binds, easter eggs, and information on the story-line. A lot of time and passion has gone into this project. I hope you enjoy it! 🎉
-
-I'm the only person building this game so please be patient lol. I created FuzzyBuddyFarms because I wanted to learn Odin and because I wanted to try to build a real video game. My approach is a little different compared to other conventional video games. Everything is rendered and drawn using Raylib with vector math. This was done intentionally so anyone can play this game on any machine. **You can run this game on pretty much any hardware from the past 2 decades.**
 
 https://github.com/user-attachments/assets/7fbb42ac-bae3-456c-bd60-c6c6c5f8df02
 
@@ -100,9 +98,9 @@ __COLOR CODING INDEX__
 
 | Platform | Architecture | Guide |
 |:--|:--|:--|
-| 🍎 **macOS** | Apple Silicon / Intel | [macOS Build Guide](#-macos-apple-silicon--intel) |
-| 🪟 **Windows** | amd64 (Intel / AMD) | [Windows Build Guide](#-windows-amd64) |
-| 🐧 **Linux** | amd64 / arm64 | [Linux Overview](#-linux) |
+|  **macOS** | Apple Silicon / Intel | [macOS Build Guide](#-macos-apple-silicon--intel) |
+|  **Windows** | amd64 (Intel / AMD) | [Windows Build Guide](#-windows-amd64) |
+|  **Linux** | amd64 / arm64 | [Linux Overview](#-linux) |
 
 </details>
 
@@ -185,9 +183,9 @@ Make sure to visit the **soccer field**, **race track**, **fishing pond**, or th
 
 | Platform | Architecture | Download File |
 |:--|:--|:--|
-| 🪟 **Windows** | 64-bit (Intel / AMD) | `Fuzzy_Buddy_Farms-windows-amd64.zip` |
-| 🍎 **macOS** | Apple Silicon (M-series) | `Fuzzy_Buddy_Farms-macos-arm64.zip` |
-| 🍎 **macOS** | Intel | `Fuzzy_Buddy_Farms-macos-amd64.zip` |
+|  **Windows** | 64-bit (Intel / AMD) | `Fuzzy_Buddy_Farms-windows-amd64.zip` |
+|  **macOS** | Apple Silicon (M-series) | `Fuzzy_Buddy_Farms-macos-arm64.zip` |
+|  **macOS** | Intel | `Fuzzy_Buddy_Farms-macos-amd64.zip` |
 
 ### 🐧 Linux — Pick by Distribution
 
@@ -198,7 +196,7 @@ Make sure to visit the **soccer field**, **race track**, **fishing pond**, or th
 | `Fuzzy_Buddy_Farms-raspberrypi-arm64.zip` | **aarch64** | Raspberry Pi OS *(Bookworm **and** Trixie)* | 🍓 Built against **glibc 2.36** — widest Pi compatibility |
 
 <details>
-<summary><b>🤔 Which Raspberry Pi build should I choose?</b></summary>
+<summary><b> Which Raspberry Pi build should you choose?</b></summary>
 
 <br>
 
@@ -226,7 +224,9 @@ flatpak install --user Fuzzy_Buddy_Farms-x86_64.flatpak
 flatpak run io.github.ooofruitsnacks.FuzzyBuddyFarms
 ```
 
-**Flatpak solves nearly every gap from the "unsupported distros" list.** openSUSE, Void, Solus, Slackware, NixOS, RHEL 8, Alpine, and the immutable Fedora variants all get covered by one artifact because the runtime carries its own glibc and X11 stack. 32-bit ARM architecture is not supported. 
+**Flatpak solves nearly every gap from the "unsupported distros" list.** 
+
+OpenSUSE, Void, Solus, Slackware, NixOS, RHEL 8, Alpine, and the Fedora variants all get covered because the runtime carries its own glibc and X11 stack. 32-bit ARM architecture is not supported. 
 
 
 ### 📦 How to Download
@@ -250,8 +250,8 @@ Each release includes a `checksums.txt` file with SHA256 hashes for every zip. T
 
 | OS | Command |
 |:--|:--|
-| 🍎 **macOS** / 🐧 **Linux** | `shasum -a 256 -c checksums.txt` |
-| 🪟 **Windows** | `Get-FileHash .\Fuzzy_Buddy_Farms-windows-amd64.zip -Algorithm SHA256` |
+|  **macOS** /  **Linux** | `shasum -a 256 -c checksums.txt` |
+|  **Windows** | `Get-FileHash .\Fuzzy_Buddy_Farms-windows-amd64.zip -Algorithm SHA256` |
 
 **macOS / Linux** — open the directory where you have FuzzyBuddyFarms saved and run:
 
@@ -312,9 +312,9 @@ If you don't trust pre-bundled packages or if you want to make your own changes 
 
 | Platform | Jump to Guide |
 |:--|:--|
-| 🍎 macOS (Silicon / arm64 / Intel / amd64) | [macOS](#-macos-apple-silicon--intel) |
-| 🪟 Windows (amd64 / Intel or AMD) | [Windows](#-windows-amd64) |
-| 🐧 Linux (all distributions) | [Linux](#-linux) |
+|  macOS (Silicon / arm64 / Intel / amd64) | [macOS](#-macos-apple-silicon--intel) |
+|  Windows (amd64 / Intel or AMD) | [Windows](#-windows-amd64) |
+|  Linux (all distributions) | [Linux](#-linux) |
 
 ---
 
