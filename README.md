@@ -17,7 +17,7 @@
 </div>
 
 > [!TIP]
-> Please visit the [**Wiki**](wiki) section for a complete guide of the game with tips, key binds, easter eggs, and information on the story-line. A lot of time and passion has gone into this project. I hope you enjoy it! 🎉
+> Please visit the [**Wiki**](https://github.com/ooofruitsnacks/FuzzyBuddyFarms/wiki) section for a complete guide of the game with tips, key binds, easter eggs, and information on the story-line. A lot of time and passion has gone into this project. I hope you enjoy it! 🎉
 
 https://github.com/user-attachments/assets/7fbb42ac-bae3-456c-bd60-c6c6c5f8df02
 
