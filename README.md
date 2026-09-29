@@ -2,17 +2,14 @@
 
 # 🍯 Welcome to Honeyville! 🐝
 
-**Bee Farming Simulator built in Odin + Raylib**
+**Bee Farming Simulator built in Odin with Raylib**
 
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-purple.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Raspberry%20Pi-blue)](#-download)
-![GitHub Repo stars](https://img.shields.io/github/stars/oooFruitSnacks/FuzzyBuddyFarms)
 
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/oooFruitSnacks/FuzzyBuddyFarms/total)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/oooFruitSnacks/FuzzyBuddyFarms)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/w/oooFruitSnacks/FuzzyBuddyFarms)
 
-![Platform](https://img.shields.io/badge/build-passing-brightgreen?style=for-the-badge)
 
 </div>
 
